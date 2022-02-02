@@ -1,5 +1,6 @@
 // CCUS 1.0.0
 
+// #region types
 type bool = boolean;
 type num = number;
 type str = string;
@@ -23,8 +24,9 @@ enum tokenType {
   literal = 4, // 0, true, "hello"
   identifier = 5 // myFunction, myVariable
 }
+// #endregion
 
-const keywords: string[] = [
+const keywords: str[] = [
   'bool', // boolean variable
   'num', // number varialbe
   'str', // strig variable
@@ -64,8 +66,7 @@ const keywords: string[] = [
   'new' // create a new object
 ];
 
-// ?:
-const symbols: string[] = [
+const symbols: str[] = [
   '(', // open bracket (parentheses, math, boolean, arguments)
   ')', // closing bracket (parentheses, math, boolean, arguments)
   '{', // open curly bracket (object or body)
@@ -75,14 +76,8 @@ const symbols: string[] = [
   '.', // point, class/exports
   ',', // seperator (array, object, arguments in function)
   ';', // end of a statement
-  //'//', // comment
-  //'/*', // multiline comment start
-  //'/**', // multiline comment with descriptors start
-  //'*/', // multiline comment end
-  '=', // variable assigment
-  '?', // optional argument in function
-  //'"', // string identifier
-  '\\', // escape character in string
+  ':', // for each/ key value pair seperator TODO
+  '?', // optional argument in function/ tenray operator
   '+', // add, also strings
   '-', // subtrackt
   '*', // multiply
@@ -90,45 +85,53 @@ const symbols: string[] = [
   '**', // exponent
   '__', // root
   '%', // mod
-  '+=', // add val to var and save in var
+  '~', // not (bit manipulation)
+  '&', // and (bit manipulation)
+  '|', // or (bit manipulation)
+  '^', // xor (bit manipulation)
+  '<<', // left shift operator (bit manipulation)
+  '>>', // right shift operator (bit manipulation)
+  '!', // not (boolean expression)
+  '&&', // and (boolean expression)
+  '||', // or (boolean expression)
+  '=', // variable assigment
+  '+=', // var X= val; => var = var X val;
   '-=', // ""
   '*=', // ""
   '/=', // ""
   '**=', // ""
   '__=', // ""
   '%=', // ""
-  '<<=', // ""
-  '>>=', // ""
+  '~=', // ""
   '&=', // ""
   '|=', // ""
   '^=', // ""
+  '<<=', // ""
+  '>>=', // ""
+  '!=', // ""
   '&&=', // ""
   '||=', // ""
-  '++', // increase by 1
-  '--', // decrease by 1
+  '++', // increase by 1 (increment), postfix and prefix
+  '--', // decrease by 1 (decrement)
   '==', // is equal
   '!=', // is not equal
   '<', // is smaller than
   '>', // is bigger than
   '<=', // is smaller or equal than
   '>=', // is bigger or equal than
-  '!', // not (boolean expression)
-  '&&', // and (boolean expression)
-  '||', // or (boolean expression)
-  '~', // not (bit manipulation)
-  '&', // and (bit manipulation)
-  '|', // or (bit manipulation)
-  '^', // xor (bit manipulation)
+  '=>' // short function
+  //'_', // number seperator
+  //'\\', // escape character in string
+  //'//', // comment
+  //'/*', // multiline comment start
+  //'/**', // multiline comment with descriptors start
+  //'*/', // multiline comment end
+  //'"', // string identifier
   //'(s)', // toString() TODO
-  ':', // for each/ key value pair seperator TODO
-  '_', // number seperator
   //' ', // whitespace 0 TODO
   //'\n', // whitespace 1 TODO
   //'\t', // whitesspace 2 TODO
   //'[]', // array operator TODO
-  '<<', // left shift operator
-  '>>', // right shift operator
-  '=>' // short function
   //'PI', // 3.1415926535897931
   //'TAU', // 6.2831853071795862
   //'E' // 2.71828
@@ -140,6 +143,11 @@ class CCUS {
   /**
    *
    */
+  public static ASMinterpreter(asmInstructions: str[]): void {}
+
+  /**
+   *
+   */
   public static CCUStoASM(sourceCode: str): {
     originalSourceCode: str;
     tokensOfSourceCode: token[];
@@ -147,7 +155,7 @@ class CCUS {
     codeLogicTree: t;
     asmInstructions: str[];
   } {
-    const originalSourceCode: string = sourceCode;
+    const originalSourceCode: str = sourceCode;
     const tokens: token[] = this.getTokens(originalSourceCode);
     const preprocessedCode: token[] = this.preprocess(tokens);
     const logicTree: any = this.logicAnalyser(preprocessedCode);
@@ -161,11 +169,6 @@ class CCUS {
       asmInstructions: []
     };
   }
-
-  /**
-   *
-   */
-  public static ASMinterpreter(asmInstructions: str[]): void {}
 
   public static getTokens(sourceCode: str): token[] {
     // TODO: comments, keywords, symbols and identifiers inside string literals
@@ -194,6 +197,8 @@ class CCUS {
 
       switch (lastUsedType) {
         case tokenType.comment:
+          // if there was a " before and no \n, invalid
+          if (false) return match;
           comments.push(token);
           break;
         case tokenType.literal:
@@ -203,6 +208,12 @@ class CCUS {
           identifiers.push(token);
           break;
         case tokenType.keyword:
+          // if before or after is a character, not a keywords
+          if (
+            string[offset - 1].match(/[_a-zA-Z]/) ||
+            string[offset + match.length].match(/[a-zA-Z]/)
+          )
+            return match;
           _keywords.push(token);
           break;
         case tokenType.symbol:
@@ -227,6 +238,13 @@ class CCUS {
     lastUsedType = tokenType.keyword;
     code = code.replace(keywordsRegex, replacer);
 
+    // get all the literals and replace them with whitespaces
+    // TODO a lot of things, numbers: 0x support, strings are broken (identifiers, keywords, ...)
+    const literalsRegex: RegExp =
+      /(?:true|false)|(?:[+-]?(?:0[dDbBoO][+-]?)?[0-9]+(?:\.[0-9]*)?(?:[eEpP][+-]?[0-9]+)?)|(?:"(?:\\"|[^"])*")/g;
+    lastUsedType = tokenType.literal;
+    code = code.replace(literalsRegex, replacer);
+
     // get all the symbols and replace them with whitespaces
     const symbolsRegex: RegExp = new RegExp(
       symbols
@@ -237,12 +255,6 @@ class CCUS {
     );
     lastUsedType = tokenType.symbol;
     code = code.replace(symbolsRegex, replacer);
-
-    // get all the literals and replace them with whitespaces
-    const literalsRegex: RegExp =
-      /(?:true|false)|(?:[+-]?(?:0[dDbBoO][+-]?)?[0-9]+(?:\.[0-9]*)?(?:[eEpP][+-]?[0-9]+)?)|(?:"(?:\\"|[^"])*")/g;
-    lastUsedType = tokenType.literal;
-    code = code.replace(literalsRegex, replacer);
 
     // get all the identifiers and replace them with whitespaces
     const identifierRegex: RegExp = /[_a-zA-Z][a-zA-Z]*/g;
@@ -266,7 +278,13 @@ class CCUS {
   }
 
   private static preprocess(tokens: token[]): token[] {
-    return [];
+    // remove whitespaces and comments
+    tokens = tokens.filter(
+      (t) => t.type !== tokenType.whitespaces && t.type !== tokenType.comment
+    );
+    // use and def keywords
+    // check if they are used properly
+    return tokens;
   }
 
   private static logicAnalyser(tokens: token[]): t {}
@@ -274,19 +292,16 @@ class CCUS {
   private static optimiseTree(logicTree: t): t {}
 }
 
-const sourceCode: str = `
+const sourceCode1: str = `
 // f(x) = 2x
 func f(num x) {
   ret 2 * x;
 }
 `;
 
-//const resolvedCode = CCUS.CCUStoASM(sourceCode);
-//console.log(resolvedCode);
-//CCUS.ASMinterpreter(resolvedCode.asmInstructions);
-
-const testCode: str = `//
+const sourceCode2: str = `//
   // valid CCS file lol
+
   def aDef "myVal" // every "aDef" should be replaced with "myVal"
   use "file1" // insert the "file1" file at this position
   int32 x = 5;
@@ -299,17 +314,18 @@ const testCode: str = `//
  / ***/
 "wrong comment"
   // just some empty line
-     PI number
-  other/*f*/Def
+     PI
+  "other/*f*/Def" // probably wrongly parsed
+  otherDef
   // just some spaces to potentially throw of the preCompiler
   func Main () {// just a normal func which has no return type btw
-    // this is a comment and an invalid def is here def aDeff 54
+    // this is a comment and an invalid def is here def aDeff 54 aDef
     def otherDef 4 // another def in the middle of the file, which is still a global thing
     if (MyFunc(5) == 5) { // if statement with function and == use
       out("fire 1 dash 1"); // output a string
     } else { // else statement
         out  (  "fire 1 dash 2"   )    ;
-    } use "file 2" // use statment in the middle of the file
+    } use "file 2" // use statment in the middle of the line and of the file
   aDef
 
     str aStr = " Hello world ";
@@ -395,4 +411,5 @@ const testCode: str = `//
   // all of them are not comments 4
   //`;
 
-console.log(CCUS.getTokens(testCode));
+console.log(CCUS.CCUStoASM(sourceCode2).preprocessedSourceCode);
+//console.log(CCUS.getTokens(sourceCode1));
