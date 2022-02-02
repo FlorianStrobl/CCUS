@@ -1,4 +1,4 @@
-// CCUS 1.0.0
+// CCUS 1.1.0
 
 // #region types
 type bool = boolean;
