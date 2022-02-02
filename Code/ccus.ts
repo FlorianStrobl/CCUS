@@ -25,6 +25,17 @@ enum tokenType {
 }
 
 const keywords: string[] = [
+  'bool', // boolean variable
+  'num', // number varialbe
+  'str', // strig variable
+  'int8',
+  'int16',
+  'int32',
+  'int64',
+  'float16',
+  'float32',
+  'float64',
+  'float128',
   'use', // use/include (/inc??) a (header) file
   'def', // define a placeholder name for a value (preprocess)
   'imp', // import public variables
@@ -64,13 +75,13 @@ const symbols: string[] = [
   '.', // point, class/exports
   ',', // seperator (array, object, arguments in function)
   ';', // end of a statement
-  '//', // comment
-  '/*', // multiline comment start
-  '/**', // multiline comment with descriptors start
-  '*/', // multiline comment end
+  //'//', // comment
+  //'/*', // multiline comment start
+  //'/**', // multiline comment with descriptors start
+  //'*/', // multiline comment end
   '=', // variable assigment
   '?', // optional argument in function
-  '"', // string identifier
+  //'"', // string identifier
   '\\', // escape character in string
   '+', // add, also strings
   '-', // subtrackt
@@ -108,13 +119,13 @@ const symbols: string[] = [
   '&', // and (bit manipulation)
   '|', // or (bit manipulation)
   '^', // xor (bit manipulation)
-  '(s)', // toString()
+  //'(s)', // toString() TODO
   ':', // for each/ key value pair seperator TODO
   '_', // number seperator
-  ' ', // whitespace 0
-  '\n', // whitespace 1
-  '\t', // whitesspace 2
-  '[]', // array operator
+  //' ', // whitespace 0 TODO
+  //'\n', // whitespace 1 TODO
+  //'\t', // whitesspace 2 TODO
+  //'[]', // array operator TODO
   '<<', // left shift operator
   '>>', // right shift operator
   '=>' // short function
@@ -157,13 +168,16 @@ class CCUS {
   public static ASMinterpreter(asmInstructions: str[]): void {}
 
   public static getTokens(sourceCode: str): token[] {
+    // TODO: comments, keywords, symbols and identifiers inside string literals
+
     let code: str = sourceCode;
     let lastUsedType: tokenType; // TODO, much better way
 
     const comments: token[] = [];
     const literals: token[] = [];
-    const _keywords: token[] = [];
     const identifiers: token[] = [];
+    const _keywords: token[] = [];
+    const _symbols: token[] = [];
 
     function replacer(match: str, offset: num, string: str) {
       const token: token = {
@@ -185,30 +199,25 @@ class CCUS {
         case tokenType.literal:
           literals.push(token);
           break;
+        case tokenType.identifier:
+          identifiers.push(token);
+          break;
         case tokenType.keyword:
           _keywords.push(token);
           break;
-        case tokenType.identifier:
-          identifiers.push(token);
+        case tokenType.symbol:
+          _symbols.push(token);
           break;
       }
 
       return ' '.repeat(match.length);
     }
 
-    // TODO: comments inside string literals
-
     // get all the comments and replace them with whitespaces (space)
     // for correct indexes later
     const commentRegex: RegExp = /(?:\/\/.*)|(?:(?:\/\*)(?:[\s\S]*?)(?:\*\/))/g;
     lastUsedType = tokenType.comment;
     code = code.replace(commentRegex, replacer);
-
-    // get all the literals and replace them with whitespaces
-    const literalsRegex: RegExp =
-      /(?:true|false)|(?:"(?:\\"|[^"])*")|(?:[+-]?(?:0[dDbBoO][+-]?)?[0-9]+(?:\.[0-9]*)?(?:[eEpP][+-]?[0-9]+)?)/g;
-    lastUsedType = tokenType.literal;
-    code = code.replace(literalsRegex, replacer);
 
     // get all the keywords and replace them with whitespaces
     const keywordsRegex: RegExp = new RegExp(
@@ -218,24 +227,42 @@ class CCUS {
     lastUsedType = tokenType.keyword;
     code = code.replace(keywordsRegex, replacer);
 
+    // get all the symbols and replace them with whitespaces
+    const symbolsRegex: RegExp = new RegExp(
+      symbols
+        .sort((a, b) => (a.length < b.length ? 1 : -1))
+        .map((e) => e.replace(/[-[/\]{}()*+?.,\\^$|#\s]/g, '\\$&'))
+        .reduce((prev, cur) => prev + '|' + cur),
+      'g'
+    );
+    lastUsedType = tokenType.symbol;
+    code = code.replace(symbolsRegex, replacer);
+
+    // get all the literals and replace them with whitespaces
+    const literalsRegex: RegExp =
+      /(?:true|false)|(?:[+-]?(?:0[dDbBoO][+-]?)?[0-9]+(?:\.[0-9]*)?(?:[eEpP][+-]?[0-9]+)?)|(?:"(?:\\"|[^"])*")/g;
+    lastUsedType = tokenType.literal;
+    code = code.replace(literalsRegex, replacer);
+
     // get all the identifiers and replace them with whitespaces
     const identifierRegex: RegExp = /[_a-zA-Z][a-zA-Z]*/g;
     lastUsedType = tokenType.identifier;
     code = code.replace(identifierRegex, replacer);
 
-    // get all the symbols and replace them with whitespaces
-
     // replace all the whitespaces with ""
-    code = code.replace('\n', '').replace('\t', '').replace(/ +/g, '');
+    code = code.replace(/\n+/g, '').replace(/\t+/g, '').replace(/ +/g, '');
 
     // check if there are remaining characters
-    if (code.length !== 0) {
+    if (code.length !== 0)
       console.error('[LEXER]: Unresolved characters in source code: ', code);
-    }
 
-    return [...comments, ...literals, ..._keywords, ...identifiers].sort(
-      (a, b) => (a.index <= b.index ? -1 : 1)
-    );
+    return [
+      ...comments,
+      ...literals,
+      ...identifiers,
+      ..._keywords,
+      ..._symbols
+    ].sort((a, b) => (a.index <= b.index ? -1 : 1));
   }
 
   private static preprocess(tokens: token[]): token[] {
@@ -262,6 +289,7 @@ const testCode: str = `//
   // valid CCS file lol
   def aDef "myVal" // every "aDef" should be replaced with "myVal"
   use "file1" // insert the "file1" file at this position
+  int32 x = 5;
   def PI 314
 //cmt
  /* / * kfldfl
@@ -284,7 +312,7 @@ const testCode: str = `//
     } use "file 2" // use statment in the middle of the file
   aDef
 
-    str aStr = " Hello\\\\" world ";
+    str aStr = " Hello world ";
 
     num myNum = -5.3E+5;
 
@@ -368,4 +396,3 @@ const testCode: str = `//
   //`;
 
 console.log(CCUS.getTokens(testCode));
-console.log(new RegExp(keywords.reduce((prev, cur) => prev + '|' + cur)) + 'g');
