@@ -175,6 +175,7 @@ class CCUS {
 
     let code: str = sourceCode;
     let lastUsedType: tokenType; // TODO, much better way
+    // TODO escaped comments, escaped escaped characters
 
     // escapes every character inside a string for new RegExp(string)_
     const escapeStringForRegex: RegExp = /[-[/\]{}()*+?.,\\^$|#\s]/g;
@@ -236,8 +237,31 @@ class CCUS {
           //THIS
           let matchIndexInLineOfCode: num = token.column;
           let matchIndexOfEndInLineOfCode: num = token.column + match.length;
-          let startIndexesOfStringLiterals: num[] = [];
-          let endIndexesOfStringLiterals: num[] = [];
+          let indexes: num[] = [];
+          lineOfCode
+            .split('')
+            .forEach((value, index) =>
+              value === '\n' ? indexes.push(index) : 0
+            );
+          let startIndexesOfStringLiterals: num[] = indexes.filter(
+            (v, i) => i % 2 === 0
+          );
+          let endIndexesOfStringLiterals: num[] = indexes.filter(
+            (v, i) => i % 2 === 1
+          );
+          if (
+            startIndexesOfStringLiterals.length !==
+            endIndexesOfStringLiterals.length
+          ) {
+            console.error('ERROR');
+          }
+          for (let i = 0; i < startIndexesOfStringLiterals.length; ++i) {
+            if (
+              offset > startIndexesOfStringLiterals[i] &&
+              offset < endIndexesOfStringLiterals[i]
+            )
+              return match; // the comment is inside the string
+          }
           // if (
           //   lineOfCode.match(
           //     new RegExp(
