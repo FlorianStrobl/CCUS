@@ -176,11 +176,31 @@ class CCUS {
     let code: str = sourceCode;
     let lastUsedType: tokenType; // TODO, much better way
 
+    const escapeStringForRegex: RegExp = /[-[/\]{}()*+?.,\\^$|#\s]/g;
+
     const comments: token[] = [];
-    const literals: token[] = [];
-    const identifiers: token[] = [];
     const _keywords: token[] = [];
     const _symbols: token[] = [];
+    const literals: token[] = [];
+    const identifiers: token[] = [];
+
+    const commentRegex: RegExp = /(?:\/\/.*)|(?:(?:\/\*)(?:[\s\S]*?)(?:\*\/))/g;
+    const keywordsRegex: RegExp = new RegExp(
+      keywords
+        .reduce((prev, cur) => prev + '|' + cur)
+        .replace(escapeStringForRegex, '\\$&'),
+      'g'
+    );
+    const symbolsRegex: RegExp = new RegExp(
+      symbols
+        .sort((a, b) => (a.length < b.length ? 1 : -1))
+        .map((e) => e.replace(escapeStringForRegex, '\\$&'))
+        .reduce((prev, cur) => prev + '|' + cur),
+      'g'
+    );
+    const literalsRegex: RegExp =
+      /(?:true|false)|(?:[+-]?(?:0[dDbBoO][+-]?)?[0-9]+(?:\.[0-9]*)?(?:[eEpP][+-]?[0-9]+)?)|(?:"(?:\\"|[^"])*")/g;
+    const identifierRegex: RegExp = /[_a-zA-Z][a-zA-Z]*/g;
 
     function replacer(match: str, offset: num, string: str) {
       const token: token = {
@@ -192,13 +212,27 @@ class CCUS {
             .slice(0, offset)
             .split('')
             .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
-        column: offset - 1 - string.slice(0, offset).lastIndexOf('\n') // (offset) - lastLine
+        column: offset - 1 - string.slice(0, offset).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
       };
+
+      // index of the start of the line
+      const indexOfStart: num = string.slice(0, offset).lastIndexOf('\n');
+      // index of the end of the line
+      const indexOfEnd: num =
+        string
+          .slice(indexOfStart + 1)
+          .split('')
+          .indexOf('\n') +
+        indexOfStart +
+        2;
+      // the current line of code
+      const lineOfCode: str = string.slice(indexOfStart, indexOfEnd);
 
       switch (lastUsedType) {
         case tokenType.comment:
-          // if there was a " before and no \n, invalid
-          if (false) return match;
+          // if the comment is inside a string
+          if (lineOfCode.match(/".*\/\/.*"/g)) return match;
+
           comments.push(token);
           break;
         case tokenType.literal:
@@ -208,10 +242,21 @@ class CCUS {
           identifiers.push(token);
           break;
         case tokenType.keyword:
+          console.log(match);
           // if before or after is a character, not a keywords
           if (
-            string[offset - 1].match(/[_a-zA-Z]/) ||
+            (offset !== 0 ? string[offset - 1].match(/[_a-zA-Z]/) : false) ||
             string[offset + match.length].match(/[a-zA-Z]/)
+          )
+            return match;
+          // if it is in a comment
+          if (
+            lineOfCode.match(
+              new RegExp(
+                `".*${match.replace(escapeStringForRegex, '\\$&')}.*"`,
+                'g'
+              )
+            )
           )
             return match;
           _keywords.push(token);
@@ -226,42 +271,30 @@ class CCUS {
 
     // get all the comments and replace them with whitespaces (space)
     // for correct indexes later
-    const commentRegex: RegExp = /(?:\/\/.*)|(?:(?:\/\*)(?:[\s\S]*?)(?:\*\/))/g;
     lastUsedType = tokenType.comment;
     code = code.replace(commentRegex, replacer);
 
     // get all the keywords and replace them with whitespaces
-    const keywordsRegex: RegExp = new RegExp(
-      keywords.reduce((prev, cur) => prev + '|' + cur),
-      'g'
-    );
+    // RegExp: num|func|... and escape every character if needed
+
     lastUsedType = tokenType.keyword;
     code = code.replace(keywordsRegex, replacer);
 
-    // get all the literals and replace them with whitespaces
-    // TODO a lot of things, numbers: 0x support, strings are broken (identifiers, keywords, ...)
-    const literalsRegex: RegExp =
-      /(?:true|false)|(?:[+-]?(?:0[dDbBoO][+-]?)?[0-9]+(?:\.[0-9]*)?(?:[eEpP][+-]?[0-9]+)?)|(?:"(?:\\"|[^"])*")/g;
-    lastUsedType = tokenType.literal;
-    code = code.replace(literalsRegex, replacer);
-
     // get all the symbols and replace them with whitespaces
-    const symbolsRegex: RegExp = new RegExp(
-      symbols
-        .sort((a, b) => (a.length < b.length ? 1 : -1))
-        .map((e) => e.replace(/[-[/\]{}()*+?.,\\^$|#\s]/g, '\\$&'))
-        .reduce((prev, cur) => prev + '|' + cur),
-      'g'
-    );
+
     lastUsedType = tokenType.symbol;
     code = code.replace(symbolsRegex, replacer);
 
+    // get all the literals and replace them with whitespaces
+    // TODO a lot of things, numbers: 0x support, strings are broken (identifiers, keywords, ...)
+    lastUsedType = tokenType.literal;
+    code = code.replace(literalsRegex, replacer);
+
     // get all the identifiers and replace them with whitespaces
-    const identifierRegex: RegExp = /[_a-zA-Z][a-zA-Z]*/g;
     lastUsedType = tokenType.identifier;
     code = code.replace(identifierRegex, replacer);
 
-    // replace all the whitespaces with ""
+    // delete all the whitespace characters
     code = code.replace(/\n+/g, '').replace(/\t+/g, '').replace(/ +/g, '');
 
     // check if there are remaining characters
@@ -270,10 +303,10 @@ class CCUS {
 
     return [
       ...comments,
-      ...literals,
-      ...identifiers,
       ..._keywords,
-      ..._symbols
+      ..._symbols,
+      ...literals,
+      ...identifiers
     ].sort((a, b) => (a.index <= b.index ? -1 : 1));
   }
 
@@ -292,10 +325,10 @@ class CCUS {
   private static optimiseTree(logicTree: t): t {}
 }
 
-const sourceCode1: str = `
-// f(x) = 2x
+const sourceCode1: str = ` // f(x) = 2x
 func f(num x) {
-  ret 2 * x;
+  "wrong comment; func // correct comment "
+  ret 2 * x; // g(i) = 3i
 }
 `;
 
@@ -411,5 +444,5 @@ const sourceCode2: str = `//
   // all of them are not comments 4
   //`;
 
-console.log(CCUS.CCUStoASM(sourceCode2).preprocessedSourceCode);
-//console.log(CCUS.getTokens(sourceCode1));
+//console.log(CCUS.CCUStoASM(sourceCode2).preprocessedSourceCode);
+console.log(CCUS.getTokens(sourceCode1));
