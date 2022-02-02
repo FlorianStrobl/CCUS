@@ -54,7 +54,74 @@ const keywords: string[] = [
 ];
 
 // ?:
-const symbols: string[] = [];
+const symbols: string[] = [
+  '(', // open bracket (parentheses, math, boolean, arguments)
+  ')', // closing bracket (parentheses, math, boolean, arguments)
+  '{', // open curly bracket (object or body)
+  '}', // closing curly bracket (object or body)
+  '[', // open square bracket (array)
+  ']', // closing square bracket (array)
+  '.', // point, class/exports
+  ',', // seperator (array, object, arguments in function)
+  ';', // end of a statement
+  '//', // comment
+  '/*', // multiline comment start
+  '/**', // multiline comment with descriptors start
+  '*/', // multiline comment end
+  '=', // variable assigment
+  '?', // optional argument in function
+  '"', // string identifier
+  '\\', // escape character in string
+  '+', // add, also strings
+  '-', // subtrackt
+  '*', // multiply
+  '/', // divide
+  '**', // exponent
+  '__', // root
+  '%', // mod
+  '+=', // add val to var and save in var
+  '-=', // ""
+  '*=', // ""
+  '/=', // ""
+  '**=', // ""
+  '__=', // ""
+  '%=', // ""
+  '<<=', // ""
+  '>>=', // ""
+  '&=', // ""
+  '|=', // ""
+  '^=', // ""
+  '&&=', // ""
+  '||=', // ""
+  '++', // increase by 1
+  '--', // decrease by 1
+  '==', // is equal
+  '!=', // is not equal
+  '<', // is smaller than
+  '>', // is bigger than
+  '<=', // is smaller or equal than
+  '>=', // is bigger or equal than
+  '!', // not (boolean expression)
+  '&&', // and (boolean expression)
+  '||', // or (boolean expression)
+  '~', // not (bit manipulation)
+  '&', // and (bit manipulation)
+  '|', // or (bit manipulation)
+  '^', // xor (bit manipulation)
+  '(s)', // toString()
+  ':', // for each/ key value pair seperator TODO
+  '_', // number seperator
+  ' ', // whitespace 0
+  '\n', // whitespace 1
+  '\t', // whitesspace 2
+  '[]', // array operator
+  '<<', // left shift operator
+  '>>', // right shift operator
+  '=>' // short function
+  //'PI', // 3.1415926535897931
+  //'TAU', // 6.2831853071795862
+  //'E' // 2.71828
+];
 
 class CCUS {
   constructor() {}
@@ -93,6 +160,11 @@ class CCUS {
     let code: str = sourceCode;
     let lastUsedType: tokenType; // TODO, much better way
 
+    const comments: token[] = [];
+    const literals: token[] = [];
+    const _keywords: token[] = [];
+    const identifiers: token[] = [];
+
     function replacer(match: str, offset: num, string: str) {
       const token: token = {
         content: match,
@@ -113,13 +185,16 @@ class CCUS {
         case tokenType.literal:
           literals.push(token);
           break;
+        case tokenType.keyword:
+          _keywords.push(token);
+          break;
+        case tokenType.identifier:
+          identifiers.push(token);
+          break;
       }
 
       return ' '.repeat(match.length);
     }
-
-    const comments: token[] = [];
-    const literals: token[] = [];
 
     // TODO: comments inside string literals
 
@@ -131,17 +206,36 @@ class CCUS {
 
     // get all the literals and replace them with whitespaces
     const literalsRegex: RegExp =
-      /(?:true|false)|(?:number)|(?:"(?:\\"|[^"])*")/g;
+      /(?:true|false)|(?:"(?:\\"|[^"])*")|(?:[+-]?(?:0[dDbBoO][+-]?)?[0-9]+(?:\.[0-9]*)?(?:[eEpP][+-]?[0-9]+)?)/g;
     lastUsedType = tokenType.literal;
     code = code.replace(literalsRegex, replacer);
 
     // get all the keywords and replace them with whitespaces
+    const keywordsRegex: RegExp = new RegExp(
+      keywords.reduce((prev, cur) => prev + '|' + cur),
+      'g'
+    );
+    lastUsedType = tokenType.keyword;
+    code = code.replace(keywordsRegex, replacer);
 
     // get all the identifiers and replace them with whitespaces
+    const identifierRegex: RegExp = /[_a-zA-Z][a-zA-Z]*/g;
+    lastUsedType = tokenType.identifier;
+    code = code.replace(identifierRegex, replacer);
 
     // get all the symbols and replace them with whitespaces
 
-    return [...comments, ...literals];
+    // replace all the whitespaces with ""
+    code = code.replace('\n', '').replace('\t', '').replace(/ +/g, '');
+
+    // check if there are remaining characters
+    if (code.length !== 0) {
+      console.error('[LEXER]: Unresolved characters in source code: ', code);
+    }
+
+    return [...comments, ...literals, ..._keywords, ...identifiers].sort(
+      (a, b) => (a.index <= b.index ? -1 : 1)
+    );
   }
 
   private static preprocess(tokens: token[]): token[] {
@@ -274,3 +368,4 @@ const testCode: str = `//
   //`;
 
 console.log(CCUS.getTokens(testCode));
+console.log(new RegExp(keywords.reduce((prev, cur) => prev + '|' + cur)) + 'g');
