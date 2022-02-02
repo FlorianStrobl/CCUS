@@ -24,6 +24,38 @@ enum tokenType {
   identifier = 5 // myFunction, myVariable
 }
 
+const keywords: string[] = [
+  'use', // use/include (/inc??) a (header) file
+  'def', // define a placeholder name for a value (preprocess)
+  'imp', // import public variables
+  'main', // entrypoint function
+  'out', // output to user
+  'in', // input from user
+  'true', // boolean value
+  'false', // boolean value// types
+  'op', // operater overloading
+  'func', // define a function
+  'class', // define a class
+  'ret', // return from function
+  'throw', // error occured TODO (execption handling like that??)
+  'const', // constant variable/function (like static)
+  'ref', // referenz variable (can change value inside other context)
+  'if', // if statements
+  'else', // previous if statement was not executed so execute this statement (like an if)
+  'for', // for/loop loop (var x of vars)/(num i = 0; i < n; i++)/(boolean)/(number??) statement
+  'switch', // switch between multiple choices (like an if)
+  'break', // break inside a for loop/switch
+  'pub', // function/class/variable is accessible from other files/classes
+  'priv', // function/class/variable is not accessible from other files/classes/contextes
+  'prot', // function/class/variable is only accessible by derived classes
+  'of', // for for loops
+  'typeof', // get the type of a variable at runtime
+  'new' // create a new object
+];
+
+// ?:
+const symbols: string[] = [];
+
 class CCUS {
   constructor() {}
 
