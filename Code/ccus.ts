@@ -59,20 +59,48 @@ class CCUS {
 
   public static getTokens(sourceCode: str): token[] {
     let code: str = sourceCode;
+    let lastUsedType: tokenType = tokenType.comment; // TODO, much better way
+
+    const comments: token[] = [];
+    const literals: token[] = [];
+
+    function replacer(match: str, offset: num, string: str) {
+      const token: token = {
+        content: match,
+        type: tokenType.comment,
+        index: offset,
+        line:
+          string
+            .slice(0, offset)
+            .split('')
+            .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
+        column: offset - 1 - string.slice(0, offset).lastIndexOf('\n') // (offset) - lastLine
+      };
+
+      switch (lastUsedType) {
+        case tokenType.comment:
+          comments.push(token);
+          break;
+        case tokenType.literal:
+          literals.push(token);
+          break;
+      }
+
+      return ' '.repeat(match.length);
+    }
+
+    // TODO: comments inside string literals
 
     // get all the comments and replace them with whitespaces (space)
     // for correct indexes later
-    const commentRegex: RegExp = /(\/\/.*)|((\/\*)(?:[\s\S]*?)(?:\*\/))/g;
-    code = code.replace(
-      /(?:\/\/.*)|(?:(\/\*)(?:[\s\S]*?)(?:\*\/))/g,
-      (match, offset, string) => {
-        console.log('token: ', match, offset);
-        return '';
-      }
-    );
-    //console.log(code);
+    const commentRegex: RegExp = /(?:\/\/.*)|(?:(?:\/\*)(?:[\s\S]*?)(?:\*\/))/g;
+    lastUsedType = tokenType.comment;
+    code = code.replace(commentRegex, replacer);
 
     // get all the literals and replace them with whitespaces
+    const literalsRegex: RegExp = /(?:boolean)|(?:number)|(?:string)/g;
+    lastUsedType = tokenType.literal;
+    code = code.replace(literalsRegex, replacer);
 
     // get all the keywords and replace them with whitespaces
 
@@ -80,7 +108,7 @@ class CCUS {
 
     // get all the symbols and replace them with whitespaces
 
-    return [];
+    return [...comments, ...literals];
   }
 
   private static preprocess(tokens: token[]): token[] {
@@ -108,16 +136,16 @@ const testCode: str = `
   def aDef "myVal" // every "aDef" should be replaced with "myVal"
   use "file1" // insert the "file1" file at this position
   def PI 314
-
+//cmt
  /* / * kfldfl
  *
  *
  f
  / ***/
-
+boolean
   // just some empty line
-     PI
-  otherDef
+     PI number
+  other/*f*/Def
   // just some spaces to potentially throw of the preCompiler
   func Main () {// just a normal func which has no return type btw
     // this is a comment and an invalid def is here def aDeff 54
@@ -129,7 +157,7 @@ const testCode: str = `
     } use "file 2" // use statment in the middle of the file
   aDef
 
-    str aStr = " Hello\\" world ";
+    str aStr = " Hello\\\\" world ";
 
     num myNum = -5.3E+5;
 
@@ -212,4 +240,4 @@ const testCode: str = `
   // all of them are not comments 4
   `;
 
-CCUS.getTokens(testCode);
+console.log(CCUS.getTokens(testCode));
