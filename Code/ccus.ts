@@ -59,15 +59,12 @@ class CCUS {
 
   public static getTokens(sourceCode: str): token[] {
     let code: str = sourceCode;
-    let lastUsedType: tokenType = tokenType.comment; // TODO, much better way
-
-    const comments: token[] = [];
-    const literals: token[] = [];
+    let lastUsedType: tokenType; // TODO, much better way
 
     function replacer(match: str, offset: num, string: str) {
       const token: token = {
         content: match,
-        type: tokenType.comment,
+        type: lastUsedType,
         index: offset,
         line:
           string
@@ -89,6 +86,9 @@ class CCUS {
       return ' '.repeat(match.length);
     }
 
+    const comments: token[] = [];
+    const literals: token[] = [];
+
     // TODO: comments inside string literals
 
     // get all the comments and replace them with whitespaces (space)
@@ -98,7 +98,8 @@ class CCUS {
     code = code.replace(commentRegex, replacer);
 
     // get all the literals and replace them with whitespaces
-    const literalsRegex: RegExp = /(?:boolean)|(?:number)|(?:string)/g;
+    const literalsRegex: RegExp =
+      /(?:true|false)|(?:number)|(?:"(?:\\"|[^"])*")/g;
     lastUsedType = tokenType.literal;
     code = code.replace(literalsRegex, replacer);
 
@@ -131,7 +132,7 @@ func f(num x) {
 //console.log(resolvedCode);
 //CCUS.ASMinterpreter(resolvedCode.asmInstructions);
 
-const testCode: str = `
+const testCode: str = `//
   // valid CCS file lol
   def aDef "myVal" // every "aDef" should be replaced with "myVal"
   use "file1" // insert the "file1" file at this position
@@ -142,7 +143,7 @@ const testCode: str = `
  *
  f
  / ***/
-boolean
+"wrong comment"
   // just some empty line
      PI number
   other/*f*/Def
@@ -238,6 +239,6 @@ boolean
   /
   / 3
   // all of them are not comments 4
-  `;
+  //`;
 
 console.log(CCUS.getTokens(testCode));
