@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 // #region types, vars and funcs
 type code = string;
 type alphanumeric = string;

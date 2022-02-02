@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "target": "ESNEXT",
+    "lib": ["ESNEXT", "DOM", "ESNEXT.String"]
+  }
+}
