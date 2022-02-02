@@ -176,6 +176,7 @@ class CCUS {
     let code: str = sourceCode;
     let lastUsedType: tokenType; // TODO, much better way
 
+    // escapes every character inside a string for new RegExp(string)_
     const escapeStringForRegex: RegExp = /[-[/\]{}()*+?.,\\^$|#\s]/g;
 
     const comments: token[] = [];
@@ -186,9 +187,7 @@ class CCUS {
 
     const commentRegex: RegExp = /(?:\/\/.*)|(?:(?:\/\*)(?:[\s\S]*?)(?:\*\/))/g;
     const keywordsRegex: RegExp = new RegExp(
-      keywords
-        .reduce((prev, cur) => prev + '|' + cur)
-        .replace(escapeStringForRegex, '\\$&'),
+      keywords.reduce((prev, cur) => prev + '|' + cur),
       'g'
     );
     const symbolsRegex: RegExp = new RegExp(
@@ -235,21 +234,15 @@ class CCUS {
 
           comments.push(token);
           break;
-        case tokenType.literal:
-          literals.push(token);
-          break;
-        case tokenType.identifier:
-          identifiers.push(token);
-          break;
         case tokenType.keyword:
-          console.log(match);
-          // if before or after is a character, not a keywords
+          // if before or after is an alphanumeric character it is not a keyword
           if (
             (offset !== 0 ? string[offset - 1].match(/[_a-zA-Z]/) : false) ||
             string[offset + match.length].match(/[a-zA-Z]/)
           )
             return match;
-          // if it is in a comment
+
+          // if it is inside a comment it is not a keyword
           if (
             lineOfCode.match(
               new RegExp(
@@ -259,10 +252,44 @@ class CCUS {
             )
           )
             return match;
+
           _keywords.push(token);
           break;
         case tokenType.symbol:
+          // if it is inside a comment it is not a symbol
+          if (
+            lineOfCode.match(
+              new RegExp(
+                `".*${match.replace(escapeStringForRegex, '\\$&')}.*"`,
+                'g'
+              )
+            )
+          )
+            return match;
+
+          // TODO check if e.g. - or + is inside a number literal
+
           _symbols.push(token);
+          break;
+        case tokenType.literal:
+          literals.push(token);
+          break;
+        case tokenType.identifier:
+          // if it is inside a comment it is not a symbol
+          if (
+            lineOfCode.match(
+              new RegExp(
+                `".*${match.replace(escapeStringForRegex, '\\$&')}.*"`,
+                'g'
+              )
+            )
+          )
+            return match;
+
+          // if it is 1 to 1 a keyword it is not an identifier
+          if (keywords.includes(match)) return match;
+
+          identifiers.push(token);
           break;
       }
 
