@@ -215,7 +215,8 @@ class CCUS {
       };
 
       // index of the start of the line
-      const indexOfStart: num = string.slice(0, offset).lastIndexOf('\n');
+      let indexOfStart: num = string.slice(0, offset).lastIndexOf('\n');
+      if (indexOfStart === -1) indexOfStart = 0;
       // index of the end of the line
       const indexOfEnd: num =
         string
@@ -231,7 +232,21 @@ class CCUS {
         case tokenType.comment:
           // if the comment is inside a string
           // TODO, get all the strings and check if the indexes of beginning and end are in between the offset
-          if (lineOfCode.match(/".*\/\/.*"/g)) return match;
+          // if (startIndex < offset && endIndex > offset
+          //THIS
+          let matchIndexInLineOfCode: num = token.column;
+          let matchIndexOfEndInLineOfCode: num = token.column + match.length;
+          let startIndexesOfStringLiterals: num[] = [];
+          let endIndexesOfStringLiterals: num[] = [];
+          // if (
+          //   lineOfCode.match(
+          //     new RegExp(
+          //       `".*${match}.*"`.replace(escapeStringForRegex, '\\$&'),
+          //       'g'
+          //     )
+          //   )
+          // )
+          //   return match;
 
           comments.push(token);
           break;
@@ -357,9 +372,9 @@ class CCUS {
   private static optimiseTree(logicTree: t): t {}
 }
 
-const sourceCode1: str = `"//not a comment bug" // f(x) = 2x
+const sourceCode1: str = `"not a comment bug" // f(x) = 2x
 func f(num x) {
-  "wrong comment; func // correct comment ";
+  "wrong comment func  correct comment ";
   ret 2 * x; // g(i) = 3i
 }
 //`;
