@@ -230,6 +230,7 @@ class CCUS {
       switch (lastUsedType) {
         case tokenType.comment:
           // if the comment is inside a string
+          // TODO, get all the strings and check if the indexes of beginning and end are in between the offset
           if (lineOfCode.match(/".*\/\/.*"/g)) return match;
 
           comments.push(token);
@@ -243,6 +244,7 @@ class CCUS {
             return match;
 
           // if it is inside a comment it is not a keyword
+          // TODO, get all the strings and check if the indexes of beginning and end are in between the offset
           if (
             lineOfCode.match(
               new RegExp(
@@ -257,6 +259,7 @@ class CCUS {
           break;
         case tokenType.symbol:
           // if it is inside a comment it is not a symbol
+          // TODO, get all the strings and check if the indexes of beginning and end are in between the offset
           if (
             lineOfCode.match(
               new RegExp(
@@ -272,10 +275,12 @@ class CCUS {
           _symbols.push(token);
           break;
         case tokenType.literal:
+          // TODO, what if number literal inside string literal
           literals.push(token);
           break;
         case tokenType.identifier:
-          // if it is inside a comment it is not a symbol
+          // if it is inside a comment it is not an identifier
+          // TODO, get all the strings and check if the indexes of beginning and end are in between the offset
           if (
             lineOfCode.match(
               new RegExp(
@@ -352,12 +357,12 @@ class CCUS {
   private static optimiseTree(logicTree: t): t {}
 }
 
-const sourceCode1: str = ` // f(x) = 2x
+const sourceCode1: str = `"//not a comment bug" // f(x) = 2x
 func f(num x) {
-  "wrong comment; func // correct comment "
+  "wrong comment; func // correct comment ";
   ret 2 * x; // g(i) = 3i
 }
-`;
+//`;
 
 const sourceCode2: str = `//
   // valid CCS file lol
