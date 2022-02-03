@@ -28,30 +28,48 @@ enum tokenType {
 
 const keywords: str[] = [
   'bool', // boolean variable
-  'num', // number varialbe
   'str', // strig variable
-  'int8',
+  'num', // number varialbe
+  'bint', // big int (needed if num?)
+  'buint', // bit uint (needed if num?)
+  'int8', // integers
   'int16',
   'int32',
   'int64',
-  'float16',
+  'uint8', // unsigned int
+  'uint16',
+  'uint32',
+  'uint64',
+  'float16', // decimal numbers
   'float32',
   'float64',
   'float128',
+  'float256',
+  'decimal16', // string formated floats
+  'decimal32',
+  'decimal64',
+  'decimal128',
+  'decimal256',
+  'decimal512',
+  'true', // boolean value
+  'false', // boolean value// types
   'use', // use/include (/inc??) a (header) file
   'def', // define a placeholder name for a value (preprocess)
-  'imp', // import public variables
+  'imp', // import public variables/functions/classes
   'main', // entrypoint function
   'out', // output to user
   'in', // input from user
-  'true', // boolean value
-  'false', // boolean value// types
-  'op', // operater overloading
   'func', // define a function
+  'interface', // for let or class
+  'let', // create a variable without specifing the type
   'class', // define a class
+  'enum', // aliase from string to other type
+  'op', // operater overloading
+  'iterator', // TODO, for classes
   'ret', // return from function
   'throw', // error occured TODO (execption handling like that??)
   'const', // constant variable/function (like static)
+  'static', // needed inside classes because const?
   'ref', // referenz variable (can change value inside other context)
   'if', // if statements
   'else', // previous if statement was not executed so execute this statement (like an if)
@@ -119,7 +137,8 @@ const symbols: str[] = [
   '>', // is bigger than
   '<=', // is smaller or equal than
   '>=', // is bigger or equal than
-  '=>' // short function
+  '=>', // short function
+  '...' // unpack operator
   //'_', // number seperator
   //'\\', // escape character in string
   //'//', // comment
