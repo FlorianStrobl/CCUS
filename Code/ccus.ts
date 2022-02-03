@@ -231,17 +231,19 @@ class CCUS {
 
       switch (lastUsedType) {
         case tokenType.comment:
+          // TODO, comment in string then comment => only one comment was sawn + it is the first one
+          console.log(match + '\n');
           // if the comment is inside a string
           // TODO, get all the strings and check if the indexes of beginning and end are in between the offset
           // if (startIndex < offset && endIndex > offset
           //THIS
           let matchIndexInLineOfCode: num = token.column;
-          let matchIndexOfEndInLineOfCode: num = token.column + match.length;
+          //let matchIndexOfEndInLineOfCode: num = token.column + match.length;
           let indexes: num[] = [];
           lineOfCode
             .split('')
             .forEach((value, index) =>
-              value === '\n' ? indexes.push(index) : 0
+              value === '"' ? indexes.push(index) : 0
             );
           let startIndexesOfStringLiterals: num[] = indexes.filter(
             (v, i) => i % 2 === 0
@@ -255,10 +257,13 @@ class CCUS {
           ) {
             console.error('ERROR');
           }
+
+          //console.log(indexes, match);
+
           for (let i = 0; i < startIndexesOfStringLiterals.length; ++i) {
             if (
-              offset > startIndexesOfStringLiterals[i] &&
-              offset < endIndexesOfStringLiterals[i]
+              matchIndexInLineOfCode > startIndexesOfStringLiterals[i] &&
+              matchIndexInLineOfCode < endIndexesOfStringLiterals[i]
             )
               return match; // the comment is inside the string
           }
@@ -396,9 +401,9 @@ class CCUS {
   private static optimiseTree(logicTree: t): t {}
 }
 
-const sourceCode1: str = `"not a comment bug" // f(x) = 2x
+const sourceCode1: str = `"//not a comment bug" // f(x) = 2x
 func f(num x) {
-  "wrong comment func  correct comment ";
+  "wrong //comment func ; correct comment ";
   ret 2 * x; // g(i) = 3i
 }
 //`;
