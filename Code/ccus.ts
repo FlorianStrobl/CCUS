@@ -26,12 +26,17 @@ enum tokenType {
 }
 // #endregion
 
+const CCUSFile: str = `
+def false (bit)0
+def true (bit)1
+`;
+
 const keywords: str[] = [
-  'bool', // boolean variable
+  'bit', // boolean variable
   'str', // strig variable
   'num', // number varialbe
   'bint', // big int (needed if num?)
-  'buint', // bit uint (needed if num?)
+  //'buint', // bit uint (needed if num?)
   'int8', // integers
   'int16',
   'int32',
@@ -44,13 +49,16 @@ const keywords: str[] = [
   'float32',
   'float64',
   'float128',
-  'float256',
-  'decimal16', // string formated floats
-  'decimal32',
+  'float256', // ieee754 octuple precision
+  'decimal32', // string formated floats
   'decimal64',
   'decimal128',
   'decimal256',
   'decimal512',
+  'char8', // integer which can get read as a character/string
+  'char16',
+  'char32',
+  'char64',
   'true', // boolean value
   'false', // boolean value// types
   'use', // use/include (/inc??) a (header) file
