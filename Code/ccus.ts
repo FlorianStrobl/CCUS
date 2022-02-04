@@ -36,11 +36,11 @@ def true (bit)1
 
 // TODO serial vs parallel, async
 const keywords: str[] = [
-  'bit', // boolean variable
   'str', // strig variable
-  'num', // number varialbe
+  'num', // numeric variable
   'bint', // big int (needed if num?)
   //'buint', // bit uint (needed if num?)
+  'bit', // boolean variable (0 or 1)
   'int8', // integers
   'int16',
   'int32',
@@ -49,23 +49,23 @@ const keywords: str[] = [
   'uint16',
   'uint32',
   'uint64',
-  'float16', // decimal numbers
+  'float16', // decimal numbers (needed?)
   'float32',
   'float64',
   'float128',
-  'float256', // ieee754 octuple precision
-  'decimal32', // string formated floats
+  'float256', // ieee754 octuple precision (needed?)
+  'decimal32', // string formated floats (needed?)
   'decimal64',
   'decimal128',
-  'decimal256',
-  'decimal512',
+  'decimal256', // (needed?)
+  'decimal512', // (needed?)
   'char8', // integer which can get read as a character/string
   'char16',
   'char32',
-  'char64',
-  'true', // boolean value
-  'false', // boolean value// types
-  'use', // use/include (/inc??) a (header) file
+  'char64', // (needed?)
+  'true', // boolean literal (not actually since it is a def)
+  'false', // boolean literal (not actually since it is a def)
+  'use', // use/include (/inc??) a (header, ccus) file
   'def', // define a placeholder name for a value (preprocess)
   'imp', // import public variables/functions/classes
   'main', // entrypoint function
