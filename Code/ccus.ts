@@ -1,4 +1,7 @@
 // CCUS 1.1.0
+// parallel tasks (gpu, async-promise-await)
+// html, css, latex and regex equivalent string options
+// systemverilog
 
 // #region types
 type bool = boolean;
