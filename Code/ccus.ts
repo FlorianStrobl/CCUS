@@ -31,7 +31,7 @@ def false (bit)0
 def true (bit)1
 `;
 
-// TODO serial vs parallel
+// TODO serial vs parallel, async
 const keywords: str[] = [
   'bit', // boolean variable
   'str', // strig variable
