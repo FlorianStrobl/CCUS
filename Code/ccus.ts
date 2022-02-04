@@ -182,6 +182,7 @@ class CCUS {
     codeLogicTree: t;
     asmInstructions: str[];
   } {
+    sourceCode = CCUSFile + sourceCode;
     const originalSourceCode: str = sourceCode;
     const tokens: token[] = this.getTokens(originalSourceCode);
     const preprocessedCode: token[] = this.preprocess(tokens);
