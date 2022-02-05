@@ -218,7 +218,10 @@ class CCUS {
     const literals: token[] = [];
     const identifiers: token[] = [];
 
-    const commentRegex: RegExp = /(?:\/\/.*)|(?:(?:\/\*)(?:[\s\S]*?)(?:\*\/))/g;
+    // old /(?:\/\/.*)|(?:(?:\/\*)(?:[\s\S]*?)(?:\*\/))/g
+    // new /(?:\/\/(?:[^/\n]|\/[^/\n]|\/$)*)|(?:\/\*.*\*\/)/gm
+    const commentRegex: RegExp =
+      /(?:\/\/(?:[^/\n]|\/[^/\n]|\/$)*)|(?:\/\*.*\*\/)/gm;
     const keywordsRegex: RegExp = new RegExp(
       keywords.reduce((prev, cur) => prev + '|' + cur),
       'g'
@@ -264,19 +267,34 @@ class CCUS {
       switch (lastUsedType) {
         case tokenType.comment:
           // TODO, comment in string then comment => only one comment was sawn + it is the first one
-          console.log(match + '\n');
           // if the comment is inside a string
           // TODO, get all the strings and check if the indexes of beginning and end are in between the offset
           // if (startIndex < offset && endIndex > offset
           //THIS
           let matchIndexInLineOfCode: num = token.column;
           //let matchIndexOfEndInLineOfCode: num = token.column + match.length;
+          // get indexes of none escaped " characters
+          // TODO what if " " // "
           let indexes: num[] = [];
-          lineOfCode
-            .split('')
-            .forEach((value, index) =>
-              value === '"' ? indexes.push(index) : 0
-            );
+          let isEscaped: bool = false;
+          for (let i = 0; i < lineOfCode.length; ++i) {
+            const char: str = lineOfCode[i];
+
+            // next character will be escaped if this one isnt escaped
+            if (char === '\\' && isEscaped === false) isEscaped = true;
+            else if (char === '"' && isEscaped !== true) indexes.push(i);
+            else if (isEscaped === true) isEscaped = false;
+
+            // TODO check for previous comments and if the " was inside them
+            // not possible as multiline comments are a thing
+          }
+          console.log('indexes: ', indexes);
+          // lineOfCode
+          //   .split('')
+          //   .forEach((value, index) =>
+          //     value === '"' ? indexes.push(index) : 0
+          //   );
+          //console.log(match + '\n', indexes, matchIndexInLineOfCode);
           let startIndexesOfStringLiterals: num[] = indexes.filter(
             (v, i) => i % 2 === 0
           );
@@ -286,16 +304,21 @@ class CCUS {
           if (
             startIndexesOfStringLiterals.length !==
             endIndexesOfStringLiterals.length
-          ) {
-            console.error('ERROR');
-          }
+          )
+            console.error(
+              '[LEXER]: ERROR\nDifferent amounts of opend string literals than closed literals: ' +
+                startIndexesOfStringLiterals.length +
+                ' opend, ' +
+                endIndexesOfStringLiterals.length +
+                ' closed\n'
+            );
 
           //console.log(indexes, match);
 
           for (let i = 0; i < startIndexesOfStringLiterals.length; ++i) {
             if (
-              matchIndexInLineOfCode > startIndexesOfStringLiterals[i] &&
-              matchIndexInLineOfCode < endIndexesOfStringLiterals[i]
+              matchIndexInLineOfCode >= startIndexesOfStringLiterals[i] &&
+              matchIndexInLineOfCode <= endIndexesOfStringLiterals[i]
             )
               return match; // the comment is inside the string
           }
@@ -395,8 +418,8 @@ class CCUS {
 
     // get all the literals and replace them with whitespaces
     // TODO a lot of things, numbers: 0x support, strings are broken (identifiers, keywords, ...)
-    lastUsedType = tokenType.literal;
-    code = code.replace(literalsRegex, replacer);
+    //lastUsedType = tokenType.literal;
+    //code = code.replace(literalsRegex, replacer);
 
     // get all the identifiers and replace them with whitespaces
     lastUsedType = tokenType.identifier;
@@ -433,10 +456,16 @@ class CCUS {
   private static optimiseTree(logicTree: t): t {}
 }
 
-const sourceCode1: str = `"//not a comment bug" // f(x) = 2x
+const sourceCode1: str = `
+"\\"// not a comment"
+"\\"" // " this is a comment
+"\\"" // "
+/* " */ // " comment
+"//not a comment bug"; // f(x) = 2x
+"\\"" // " this is a comment
 func f(num x) {
   "wrong //comment func ; correct comment ";
-  ret 2 * x; // g(i) = 3i
+  ret 2 *x++; // g(i) = 3i
 }
 //`;
 
