@@ -29,9 +29,18 @@ enum tokenType {
 }
 // #endregion
 
-const CCUSFile: str = `
+const CCUSheader: str = `
 def false (bit)0
 def true (bit)1
+`;
+
+const CCUSSettingsHeader: str = `
+
+`;
+
+const CCUSFile: str = `
+use "ccus"
+use "ccussettings"
 `;
 
 // TODO serial vs parallel, async
@@ -189,6 +198,7 @@ class CCUS {
     sourceCode = CCUSFile + sourceCode;
     const originalSourceCode: str = sourceCode;
     const tokens: token[] = this.getTokens(originalSourceCode);
+    // check global folder for headers, then project folder and then local files
     const preprocessedCode: token[] = this.preprocess(tokens);
     const logicTree: any = this.logicAnalyser(preprocessedCode);
     const optimisedTree: any = this.optimiseTree(logicTree);
@@ -205,6 +215,15 @@ class CCUS {
   public static getTokens(sourceCode: str): token[] {
     // TODO: comments, keywords, symbols and identifiers inside string literals
 
+    // comments (char by char)
+    // literals (char by char/regexp)
+
+    // symbols (regexp)
+
+    // identifier and then filter for keywords (regexp)
+
+    // check for surviving characters beside whitespaces
+
     let code: str = sourceCode;
     let lastUsedType: tokenType; // TODO, much better way
     // TODO escaped comments, escaped escaped characters
@@ -216,12 +235,12 @@ class CCUS {
     const _keywords: token[] = [];
     const _symbols: token[] = [];
     const literals: token[] = [];
-    const identifiers: token[] = [];
+    let identifiers: token[] = [];
 
     // old /(?:\/\/.*)|(?:(?:\/\*)(?:[\s\S]*?)(?:\*\/))/g
     // new /(?:\/\/(?:[^/\n]|\/[^/\n]|\/$)*)|(?:\/\*.*\*\/)/gm
-    const commentRegex: RegExp =
-      /(?:\/\/(?:[^/\n]|\/[^/\n]|\/$)*)|(?:\/\*.*\*\/)/gm;
+    //const commentRegex: RegExp =
+    //  /(?:\/\/(?:[^/\n]|\/[^/\n]|\/$)*)|(?:\/\*.*\*\/)/gm;
     const keywordsRegex: RegExp = new RegExp(
       keywords.reduce((prev, cur) => prev + '|' + cur),
       'g'
@@ -233,11 +252,11 @@ class CCUS {
         .reduce((prev, cur) => prev + '|' + cur),
       'g'
     );
-    const literalsRegex: RegExp =
-      /(?:true|false)|(?:[+-]?(?:0[dDbBoO][+-]?)?[0-9]+(?:\.[0-9]*)?(?:[eEpP][+-]?[0-9]+)?)|(?:"(?:\\"|[^"])*")/g;
-    const identifierRegex: RegExp = /[_a-zA-Z][a-zA-Z]*/g;
+    //const literalsRegex: RegExp =
+    //   /(?:true|false)|(?:[+-]?(?:0[dDbBoO][+-]?)?[0-9]+(?:\.[0-9]*)?(?:[eEpP][+-]?[0-9]+)?)|(?:"(?:\\"|[^"])*")/g;
+    const identifierRegex: RegExp = /[_a-zA-Z][a-zA-Z0-9]*/g;
 
-    function replacer(match: str, offset: num, string: str) {
+    function replacer(match: str, offset: num, string: str): str {
       const token: token = {
         content: match,
         type: lastUsedType,
@@ -266,6 +285,7 @@ class CCUS {
 
       switch (lastUsedType) {
         case tokenType.comment:
+          return '';
           // TODO, comment in string then comment => only one comment was sawn + it is the first one
           // if the comment is inside a string
           // TODO, get all the strings and check if the indexes of beginning and end are in between the offset
@@ -374,6 +394,7 @@ class CCUS {
           _symbols.push(token);
           break;
         case tokenType.literal:
+          return '';
           // TODO, what if number literal inside string literal
           literals.push(token);
           break;
@@ -402,19 +423,69 @@ class CCUS {
 
     // get all the comments and replace them with whitespaces (space)
     // for correct indexes later
-    lastUsedType = tokenType.comment;
-    code = code.replace(commentRegex, replacer);
+    //lastUsedType = tokenType.comment;
+    //code = code.replace(commentRegex, replacer);
 
-    // get all the keywords and replace them with whitespaces
-    // RegExp: num|func|... and escape every character if needed
+    // TODO get comments and replace them with whitespaces
+    // TODO get string literals, get number literals
+    let inStr: bool = false;
+    let inComment: bool = false;
+    let lastCharWasEscape: bool = false;
+    let lastIndex: num = 0;
+    let curContent: str = '';
+    for (let i = 0; i < code.length; ++i) {
+      const char: str = code[i];
 
-    lastUsedType = tokenType.keyword;
-    code = code.replace(keywordsRegex, replacer);
+      // code for string literal
+      if (char === '"' && inStr === false && inComment === false) {
+        // start a new string literal
+        inStr = true;
+        curContent += char;
+        lastIndex = i;
+        continue;
+      } else if (
+        char === '\\' &&
+        inStr === true &&
+        inComment === false &&
+        lastCharWasEscape === false
+      ) {
+        // save escape characters
+        lastCharWasEscape = true;
+        curContent += char;
+        continue;
+      } else if (
+        char === '"' &&
+        inStr === true &&
+        inComment === false &&
+        lastCharWasEscape === false
+      ) {
+        // check if string literal is at it's end
+        curContent += char;
+        literals.push({
+          content: curContent,
+          type: tokenType.literal,
+          index: lastIndex,
+          line:
+            code
+              .slice(0, lastIndex)
+              .split('')
+              .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
+          column: lastIndex - 1 - code.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+        });
+        curContent = '';
+        inStr = false;
 
-    // get all the symbols and replace them with whitespaces
+        continue;
+      } else if (lastCharWasEscape === true) {
+        lastCharWasEscape = false;
+        if (inStr === true) curContent += char;
+        continue;
+      }
 
-    lastUsedType = tokenType.symbol;
-    code = code.replace(symbolsRegex, replacer);
+      // code for single line comment
+      if (char === '/' && inStr === false) {
+      }
+    }
 
     // get all the literals and replace them with whitespaces
     // TODO a lot of things, numbers: 0x support, strings are broken (identifiers, keywords, ...)
@@ -425,11 +496,29 @@ class CCUS {
     lastUsedType = tokenType.identifier;
     code = code.replace(identifierRegex, replacer);
 
+    // get all the symbols and replace them with whitespaces
+    lastUsedType = tokenType.symbol;
+    code = code.replace(symbolsRegex, replacer);
+
+    // get all the keywords and replace them with whitespaces
+    // RegExp: num|func|... and escape every character if needed
+    //lastUsedType = tokenType.keyword;
+    //code = code.replace(keywordsRegex, replacer);
+
+    // TODO go through all the identifiers and check for keywords
+
     // delete all the whitespace characters
-    code = code.replace(/\n+/g, '').replace(/\t+/g, '').replace(/ +/g, '');
+    //code = code.replace(/\n+/g, '').replace(/\t+/g, '').replace(/ +/g, '');
+
+    identifiers = identifiers.filter((e) => {
+      if (e.content.match(keywordsRegex) !== null) {
+        _keywords.push(e);
+        return false;
+      } else return true;
+    });
 
     // check if there are remaining characters
-    if (code.length !== 0)
+    if (code.match(/(?:\n|\t| )*/g) !== null)
       console.error('[LEXER]: Unresolved characters in source code: ', code);
 
     return [
@@ -466,7 +555,7 @@ const sourceCode1: str = `
 func f(num x) {
   "wrong //comment func ; correct comment ";
   ret 2 *x++; // g(i) = 3i
-}
+  ret x++ + (++y[]++)*x;}//
 //`;
 
 const sourceCode2: str = `//
