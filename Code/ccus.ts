@@ -426,6 +426,7 @@ class CCUS {
     //lastUsedType = tokenType.comment;
     //code = code.replace(commentRegex, replacer);
 
+    // TODO now remove comments and string literals
     // TODO get comments and replace them with whitespaces
     // TODO get string literals, get number literals
     let inStr: bool = false;
@@ -433,10 +434,13 @@ class CCUS {
     let lastCharWasEscape: bool = false;
     let lastIndex: num = 0;
     let curContent: str = '';
+    let lastCharWasSlash: bool = false;
+    let lastCharWasStar: bool = false;
+    let commentType: 0 | 'single' | 'multi' = 0; // 0 is none
     for (let i = 0; i < code.length; ++i) {
       const char: str = code[i];
 
-      // code for string literal
+      // #region code for string literal
       if (char === '"' && inStr === false && inComment === false) {
         // start a new string literal
         inStr = true;
@@ -473,6 +477,7 @@ class CCUS {
           column: lastIndex - 1 - code.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
         });
         curContent = '';
+        lastIndex = 0;
         inStr = false;
 
         continue;
@@ -481,10 +486,126 @@ class CCUS {
         if (inStr === true) curContent += char;
         continue;
       }
+      // #endregion
 
-      // code for single line comment
-      if (char === '/' && inStr === false) {
+      // #region code for comments
+      if (
+        char === '/' &&
+        inStr === false &&
+        inComment === false &&
+        lastCharWasSlash === false
+      ) {
+        // check if it could be the star of a comment
+        lastCharWasSlash = true;
+        lastIndex = i;
+        curContent += char;
+        continue;
       }
+
+      if (
+        char === '/' &&
+        inStr === false &&
+        inComment === false &&
+        lastCharWasSlash === true
+      ) {
+        // single line comment was successfully started
+        inComment = true;
+        lastCharWasSlash = false; // no longer needed
+        curContent += char;
+        commentType = 'single';
+        continue;
+      } else if (
+        char === '*' &&
+        inStr === false &&
+        inComment === false &&
+        lastCharWasSlash === true
+      ) {
+        // multi line comment was successfully started
+        inComment = true;
+        lastCharWasSlash = false; // no longer needed
+        curContent += char;
+        commentType = 'multi';
+        continue;
+      }
+
+      if (
+        char === '\n' &&
+        inStr === false &&
+        inComment === true &&
+        commentType === 'single'
+      ) {
+        curContent += char;
+        // TODO now push
+        comments.push({
+          content: curContent,
+          type: tokenType.comment,
+          index: lastIndex,
+          line:
+            code
+              .slice(0, lastIndex)
+              .split('')
+              .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
+          column: lastIndex - 1 - code.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+        });
+        inComment = false;
+        commentType = 0;
+        curContent = '';
+        lastIndex = 0;
+        continue;
+      } else if (
+        char === '*' &&
+        inStr === false &&
+        inComment === true &&
+        commentType === 'multi'
+      ) {
+        lastCharWasStar = true;
+        curContent += char;
+        continue;
+      } else if (
+        char === '/' &&
+        inStr === false &&
+        inComment === true &&
+        commentType === 'multi' &&
+        lastCharWasStar === true
+      ) {
+        curContent += char;
+        lastCharWasStar = false;
+        // TODO now push
+        comments.push({
+          content: curContent,
+          type: tokenType.comment,
+          index: lastIndex,
+          line:
+            code
+              .slice(0, lastIndex)
+              .split('')
+              .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
+          column: lastIndex - 1 - code.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+        });
+        curContent = '';
+        lastIndex = 0;
+        inComment = false;
+        commentType = 0;
+        continue;
+      } else if (
+        inStr === false &&
+        inComment === true &&
+        commentType === 'multi' &&
+        lastCharWasStar === true
+      ) {
+        curContent += char;
+        lastCharWasStar = false;
+        continue;
+      }
+
+      // TODO test: comment start detected wrongly
+      if (inStr === false && inComment === false && lastCharWasSlash === true) {
+        lastCharWasSlash = false;
+        curContent = ''; // reset values because wrong start of comment
+        lastIndex = 0;
+        continue;
+      }
+      // #endregion
     }
 
     // get all the literals and replace them with whitespaces
