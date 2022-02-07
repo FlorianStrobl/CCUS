@@ -231,10 +231,10 @@ class CCUS {
     // escapes every character inside a string for new RegExp(string)_
     const escapeStringForRegex: RegExp = /[-[/\]{}()*+?.,\\^$|#\s]/g;
 
-    const comments: token[] = [];
+    let comments: token[] = [];
     const _keywords: token[] = [];
     const _symbols: token[] = [];
-    const literals: token[] = [];
+    let literals: token[] = [];
     let identifiers: token[] = [];
 
     // old /(?:\/\/.*)|(?:(?:\/\*)(?:[\s\S]*?)(?:\*\/))/g
@@ -308,7 +308,7 @@ class CCUS {
             // TODO check for previous comments and if the " was inside them
             // not possible as multiline comments are a thing
           }
-          console.log('indexes: ', indexes);
+          //console.log('indexes: ', indexes);
           // lineOfCode
           //   .split('')
           //   .forEach((value, index) =>
@@ -421,192 +421,226 @@ class CCUS {
       return ' '.repeat(match.length);
     }
 
+    // TODO now remove comments and string literals
+    // TODO get comments and replace them with whitespaces
+    // TODO get string literals, get number literals
+    function commentsStrings(c: str): {
+      com: token[];
+      strs: token[];
+      code: str;
+    } {
+      let com: token[] = [];
+      let strs: token[] = [];
+
+      let curContent: str = ''; // char array
+      let lastIndex: num = 0; // raw index of the current saved content
+
+      let inStr: bool = false; // char is inside a string
+      let inComment: bool = false; // char is inside a comment
+
+      let lastCharWasEscape: bool = false; // use for escaped " in strings
+
+      let commentType: 0 | 'single' | 'multi' = 0; // 0 is none
+      let lastCharWasSlash: bool = false; // use for start comment
+      let lastCharWasStar: bool = false; // use for finish multiline comment
+
+      // TODO escape multiline comment
+      for (let i = 0; i < c.length; ++i) {
+        const char: str = c[i];
+
+        // #region code for string literal
+        if (char === '"' && inStr === false && inComment === false) {
+          // start a new string literal
+          inStr = true;
+          curContent = char;
+          lastIndex = i;
+          continue;
+        } else if (
+          char === '\\' &&
+          inStr === true &&
+          inComment === false &&
+          lastCharWasEscape === false
+        ) {
+          // escape the next character
+          lastCharWasEscape = true;
+          curContent += char;
+          continue;
+        } else if (
+          char === '"' &&
+          inStr === true &&
+          inComment === false &&
+          lastCharWasEscape === false
+        ) {
+          // finished current string
+          curContent += char;
+          strs.push({
+            content: curContent,
+            type: tokenType.literal,
+            index: lastIndex,
+            line:
+              code
+                .slice(0, lastIndex)
+                .split('')
+                .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
+            column: lastIndex - 1 - code.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+          });
+          curContent = '';
+          lastIndex = 0;
+          inStr = false;
+          lastCharWasEscape = false; // reset if needed
+
+          continue;
+        } else if (inStr === true) {
+          // usual string
+          curContent += char;
+
+          // stop escaping the next character
+          if (lastCharWasEscape === true) lastCharWasEscape = false;
+          continue;
+        }
+        // #endregion
+
+        // #region code for comments
+        if (
+          char === '/' &&
+          inStr === false &&
+          inComment === false &&
+          lastCharWasSlash === false
+        ) {
+          // check if it could be the star of a comment
+          lastCharWasSlash = true;
+          curContent = char; // save values for the case (!) it is a comment
+          lastIndex = i;
+          continue;
+        }
+
+        if (
+          char === '/' &&
+          inStr === false &&
+          inComment === false &&
+          lastCharWasSlash === true
+        ) {
+          // single line comment was started
+          lastCharWasSlash = false; // no longer needed
+          inComment = true;
+          curContent += char;
+          commentType = 'single';
+          continue;
+        } else if (
+          char === '*' &&
+          inStr === false &&
+          inComment === false &&
+          lastCharWasSlash === true
+        ) {
+          // multi line comment was started
+          lastCharWasSlash = false; // no longer needed
+          inComment = true;
+          curContent += char;
+          commentType = 'multi';
+          continue;
+        } else if (
+          inStr === false &&
+          inComment === false &&
+          lastCharWasSlash === true
+        )
+          lastCharWasSlash = false; // false alarm
+
+        if (
+          char === '\n' &&
+          inStr === false &&
+          inComment === true &&
+          commentType === 'single'
+        ) {
+          // curContent += char; do not save the last \n
+          // save
+          com.push({
+            content: curContent,
+            type: tokenType.comment,
+            index: lastIndex,
+            line:
+              c
+                .slice(0, lastIndex)
+                .split('')
+                .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
+            column: lastIndex - 1 - c.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+          });
+          inComment = false;
+          commentType = 0; // reset all values
+          curContent = '';
+          lastIndex = 0;
+          continue;
+        } else if (
+          char === '*' &&
+          inStr === false &&
+          inComment === true &&
+          commentType === 'multi'
+        ) {
+          lastCharWasStar = true; // prepare end
+          curContent += char; // still save
+          continue;
+        } else if (
+          char === '/' &&
+          inStr === false &&
+          inComment === true &&
+          commentType === 'multi' &&
+          lastCharWasStar === true
+        ) {
+          curContent += char;
+          lastCharWasStar = false;
+          // save
+          com.push({
+            content: curContent,
+            type: tokenType.comment,
+            index: lastIndex,
+            line:
+              c
+                .slice(0, lastIndex)
+                .split('')
+                .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
+            column: lastIndex - 1 - c.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+          });
+          inComment = false; // reset values
+          curContent = '';
+          lastIndex = 0;
+          commentType = 0;
+          continue;
+        } else if (inStr === false && inComment === true) {
+          curContent += char;
+          if (lastCharWasStar === true) lastCharWasStar = false; // reset wrong alarm
+          continue;
+        }
+
+        // TODO test: comment start detected wrongly
+        if (
+          inStr === false &&
+          inComment === false &&
+          lastCharWasSlash === true
+        ) {
+          lastCharWasSlash = false;
+          curContent = ''; // reset values because wrong start of comment
+          lastIndex = 0;
+          continue;
+        }
+        // #endregion
+      }
+
+      // TODO now delete comments and strings in code
+      console.log(
+        code,
+        [...com, ...strs].sort((a, b) => (a.index < b.index ? -1 : 1))
+      );
+
+      return { com: com, strs: strs, code: c };
+    }
+
     // get all the comments and replace them with whitespaces (space)
     // for correct indexes later
     //lastUsedType = tokenType.comment;
     //code = code.replace(commentRegex, replacer);
 
-    // TODO now remove comments and string literals
-    // TODO get comments and replace them with whitespaces
-    // TODO get string literals, get number literals
-    let inStr: bool = false;
-    let inComment: bool = false;
-    let lastCharWasEscape: bool = false;
-    let lastIndex: num = 0;
-    let curContent: str = '';
-    let lastCharWasSlash: bool = false;
-    let lastCharWasStar: bool = false;
-    let commentType: 0 | 'single' | 'multi' = 0; // 0 is none
-    for (let i = 0; i < code.length; ++i) {
-      const char: str = code[i];
-
-      // #region code for string literal
-      if (char === '"' && inStr === false && inComment === false) {
-        // start a new string literal
-        inStr = true;
-        curContent += char;
-        lastIndex = i;
-        continue;
-      } else if (
-        char === '\\' &&
-        inStr === true &&
-        inComment === false &&
-        lastCharWasEscape === false
-      ) {
-        // save escape characters
-        lastCharWasEscape = true;
-        curContent += char;
-        continue;
-      } else if (
-        char === '"' &&
-        inStr === true &&
-        inComment === false &&
-        lastCharWasEscape === false
-      ) {
-        // check if string literal is at it's end
-        curContent += char;
-        literals.push({
-          content: curContent,
-          type: tokenType.literal,
-          index: lastIndex,
-          line:
-            code
-              .slice(0, lastIndex)
-              .split('')
-              .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
-          column: lastIndex - 1 - code.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
-        });
-        curContent = '';
-        lastIndex = 0;
-        inStr = false;
-
-        continue;
-      } else if (lastCharWasEscape === true) {
-        lastCharWasEscape = false;
-        if (inStr === true) curContent += char;
-        continue;
-      }
-      // #endregion
-
-      // #region code for comments
-      if (
-        char === '/' &&
-        inStr === false &&
-        inComment === false &&
-        lastCharWasSlash === false
-      ) {
-        // check if it could be the star of a comment
-        lastCharWasSlash = true;
-        lastIndex = i;
-        curContent += char;
-        continue;
-      }
-
-      if (
-        char === '/' &&
-        inStr === false &&
-        inComment === false &&
-        lastCharWasSlash === true
-      ) {
-        // single line comment was successfully started
-        inComment = true;
-        lastCharWasSlash = false; // no longer needed
-        curContent += char;
-        commentType = 'single';
-        continue;
-      } else if (
-        char === '*' &&
-        inStr === false &&
-        inComment === false &&
-        lastCharWasSlash === true
-      ) {
-        // multi line comment was successfully started
-        inComment = true;
-        lastCharWasSlash = false; // no longer needed
-        curContent += char;
-        commentType = 'multi';
-        continue;
-      }
-
-      if (
-        char === '\n' &&
-        inStr === false &&
-        inComment === true &&
-        commentType === 'single'
-      ) {
-        curContent += char;
-        // TODO now push
-        comments.push({
-          content: curContent,
-          type: tokenType.comment,
-          index: lastIndex,
-          line:
-            code
-              .slice(0, lastIndex)
-              .split('')
-              .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
-          column: lastIndex - 1 - code.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
-        });
-        inComment = false;
-        commentType = 0;
-        curContent = '';
-        lastIndex = 0;
-        continue;
-      } else if (
-        char === '*' &&
-        inStr === false &&
-        inComment === true &&
-        commentType === 'multi'
-      ) {
-        lastCharWasStar = true;
-        curContent += char;
-        continue;
-      } else if (
-        char === '/' &&
-        inStr === false &&
-        inComment === true &&
-        commentType === 'multi' &&
-        lastCharWasStar === true
-      ) {
-        curContent += char;
-        lastCharWasStar = false;
-        // TODO now push
-        comments.push({
-          content: curContent,
-          type: tokenType.comment,
-          index: lastIndex,
-          line:
-            code
-              .slice(0, lastIndex)
-              .split('')
-              .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
-          column: lastIndex - 1 - code.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
-        });
-        curContent = '';
-        lastIndex = 0;
-        inComment = false;
-        commentType = 0;
-        continue;
-      } else if (
-        inStr === false &&
-        inComment === true &&
-        commentType === 'multi' &&
-        lastCharWasStar === true
-      ) {
-        curContent += char;
-        lastCharWasStar = false;
-        continue;
-      }
-
-      // TODO test: comment start detected wrongly
-      if (inStr === false && inComment === false && lastCharWasSlash === true) {
-        lastCharWasSlash = false;
-        curContent = ''; // reset values because wrong start of comment
-        lastIndex = 0;
-        continue;
-      }
-      // #endregion
-    }
+    const vals = commentsStrings(code);
+    comments = vals.com;
+    literals = vals.strs;
 
     // get all the literals and replace them with whitespaces
     // TODO a lot of things, numbers: 0x support, strings are broken (identifiers, keywords, ...)
@@ -666,17 +700,23 @@ class CCUS {
   private static optimiseTree(logicTree: t): t {}
 }
 
+// TODO now, one \n too much for single line comments
 const sourceCode1: str = `
-"\\"// not a comment"
+ "\\"// not a comment"
 "\\"" // " this is a comment
 "\\"" // "
 /* " */ // " comment
+/**//**/ // comments
+/* // */
+/* " // " */
+/* *still comment */
+/* " comment */ // comment "
 "//not a comment bug"; // f(x) = 2x
 "\\"" // " this is a comment
-func f(num x) {
-  "wrong //comment func ; correct comment ";
-  ret 2 *x++; // g(i) = 3i
-  ret x++ + (++y[]++)*x;}//
+//func f(num x) {
+//  "wrong //comment func ; correct comment ";
+//  ret 2 / x++; // g(i) = 3i
+//  ret x++ + (++y[]++)*x;}//
 //`;
 
 const sourceCode2: str = `//
@@ -792,4 +832,4 @@ const sourceCode2: str = `//
   //`;
 
 //console.log(CCUS.CCUStoASM(sourceCode2).preprocessedSourceCode);
-console.log(CCUS.getTokens(sourceCode1));
+CCUS.getTokens(sourceCode1);
