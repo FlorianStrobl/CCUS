@@ -704,14 +704,16 @@ class CCUS {
 const sourceCode1: str = `
  "\\"// not a comment"
 "\\"" // " this is a comment
-"\\"" // "
 /* " */ // " comment
 /**//**/ // comments
 /* // */
-/* " // " */
+
+  /* " // " */
 /* *still comment */
+/* *\\/ still comment */ // TODO now
 /* " comment */ // comment "
-"//not a comment bug"; // f(x) = 2x
+"//not a comment bug" // f(x) = 2x
+"/**/"
 "\\"" // " this is a comment
 //func f(num x) {
 //  "wrong //comment func ; correct comment ";
