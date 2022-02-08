@@ -19,7 +19,14 @@ interface token {
   column: num; // in the line
 }
 
-interface detailedToken extends token {}
+interface detailedToken extends token {
+  detailedType: detailedTokenType;
+}
+
+enum detailedTokenType {
+  none = 0, // invalid token type
+  strLiteral = 1
+}
 
 enum tokenType {
   whitespaces = 0, // \n,  , \t
@@ -243,18 +250,19 @@ class CCUS {
     const importantTokens: detailedToken[] = this.updateTokens(tokens);
 
     // check global folder for headers, then project folder and then local files
-    const preprocessedCode: detailedToken[] = this.preprocess(importantTokens);
+    const preprocessedCode: { t: detailedToken[]; uses: str[] } =
+      this.preprocess(importantTokens);
 
     console.log(preprocessedCode);
 
-    const logicTree: any = this.logicAnalyser(preprocessedCode);
+    const logicTree: any = this.logicAnalyser(preprocessedCode.t);
 
     const optimisedTree: any = this.optimiseTree(logicTree);
 
     return {
       originalSourceCode: originalSourceCode,
       tokensOfSourceCode: tokens,
-      preprocessedSourceCode: preprocessedCode,
+      preprocessedSourceCode: preprocessedCode.t,
       codeLogicTree: optimisedTree,
       asmInstructions: []
     };
@@ -668,7 +676,7 @@ class CCUS {
       (t) => t.type !== tokenType.whitespaces && t.type !== tokenType.comment
     );
 
-    const detailedTokens = [];
+    const detailedTokens: detailedToken[] = [];
     for (const t of tokens) {
       const curContent: str = t.content;
       const curType:
@@ -676,13 +684,17 @@ class CCUS {
         | tokenType.keyword
         | tokenType.literal
         | tokenType.symbol = t.type as any;
-      detailedTokens.push(t);
+      detailedTokens.push({ ...t, detailedType: detailedTokenType.none });
     }
 
     return detailedTokens;
   }
 
-  private static preprocess(tokens: detailedToken[]): detailedToken[] {
+  private static preprocess(tokens: detailedToken[]): {
+    t: detailedToken[];
+    uses: str[];
+  } {
+    let useHeaders: str[] = [];
     // `use str (ONLY STR LITERAL, none id or var)` and `def id any \n` keywords
     // get all the use and def preprocessor statements
     // check if some use statements are double
@@ -691,10 +703,36 @@ class CCUS {
     // resolve def statements
     // `def once` / `use once` for #pragma once?
 
+    // use keyword
+    let skipNext: bool = false;
+    for (let i = 0; i < tokens.length; ++i) {
+      if (skipNext) {
+        skipNext = false;
+        continue;
+      }
+
+      const token: detailedToken = tokens[i];
+
+      if (token.content === 'use') {
+        if (
+          tokens.length < i + 1 &&
+          tokens[i + 1].detailedType === detailedTokenType.strLiteral
+        ) {
+          skipNext = true; // do not recheck this string literal
+          useHeaders.push(tokens[i + 1].content);
+        } else {
+          // error used keyword `use` wrong because i+1 is not string literal
+          console.error(
+            '[Preprocessor]: invalid use of the "use" keyword (keyword was not followed by a string literal).'
+          );
+        }
+      }
+    }
+
     // TODO probably just make a list of to get header files (use)
     // and resovle them at a later stage to fix recursiv problems
 
-    return tokens;
+    return { t: tokens, uses: [] };
   }
 
   private static logicAnalyser(tokens: detailedToken[]): t {}
