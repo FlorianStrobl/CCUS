@@ -3,6 +3,8 @@
 // html, css, latex and regex equivalent string options
 // systemverilog
 
+// TODO char literals
+
 // #region types
 type bool = boolean;
 type num = number;
@@ -25,7 +27,10 @@ interface detailedToken extends token {
 
 enum detailedTokenType {
   none = 0, // invalid token type
-  strLiteral = 1
+  strLiteral = 1,
+  charLiteral = 2,
+  numLiteral = 3,
+  identifier = 4
 }
 
 enum tokenType {
@@ -680,11 +685,42 @@ class CCUS {
     for (const t of tokens) {
       const curContent: str = t.content;
       const curType:
-        | tokenType.identifier
-        | tokenType.keyword
         | tokenType.literal
-        | tokenType.symbol = t.type as any;
-      detailedTokens.push({ ...t, detailedType: detailedTokenType.none });
+        | tokenType.keyword
+        | tokenType.symbol
+        | tokenType.identifier = t.type as any;
+
+      if (curType === tokenType.literal) {
+        // TODO replace with regex
+        if (curContent.startsWith('"'))
+          detailedTokens.push({
+            ...t,
+            detailedType: detailedTokenType.strLiteral
+          });
+        else if (curContent.startsWith("'"))
+          detailedTokens.push({
+            ...t,
+            detailedType: detailedTokenType.charLiteral
+          });
+        else
+          detailedTokens.push({
+            ...t,
+            detailedType: detailedTokenType.numLiteral
+          });
+      } else if (curType === tokenType.identifier) {
+        detailedTokens.push({
+          ...t,
+          detailedType: detailedTokenType.identifier
+        });
+      } else if (curType === tokenType.keyword) {
+        // TODO
+        detailedTokens.push({ ...t, detailedType: detailedTokenType.none });
+      } else if (curType === tokenType.symbol) {
+        // TODO
+        detailedTokens.push({ ...t, detailedType: detailedTokenType.none });
+      } else {
+        detailedTokens.push({ ...t, detailedType: detailedTokenType.none });
+      }
     }
 
     return detailedTokens;
