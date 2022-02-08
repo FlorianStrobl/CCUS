@@ -777,7 +777,8 @@ class CCUS {
           tokens.length > i + 1 &&
           tokens[i + 1].detailedType === detailedTokenType.identifier
         ) {
-          defs.push({ literal: tokens[i + 1].content, value: 'VALUE' });
+          // TODO empty value or set to 1 for boolean?
+          defs.push({ literal: tokens[i + 1].content, value: '' });
           tokens[i] = null; // dont need the keyword token anymore
         } else {
           console.error(
@@ -826,8 +827,6 @@ class CCUS {
       return t;
     });
 
-    console.log(defs);
-
     // TODO probably just make a list of to get header files (use)
     // and resovle them at a later stage to fix recursiv problems
 
@@ -840,12 +839,17 @@ class CCUS {
 }
 
 const sourceCode0: str = `
-use "test"
+use
+   /**/
+   //
 
-def y "str"
+       "test"
+
+def     //
+         /**/                  y           "str"
 
 // f(x) = 2x
-func f(num x) {
+func /**/ f(num x) {
   ret y;
 }
 `;
