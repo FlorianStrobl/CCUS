@@ -612,6 +612,13 @@ class CCUS {
   private static optimiseTree(logicTree: t): t {}
 }
 
+const sourceCode0: str = `
+// f(x) = 2x
+func f(num x) {
+  ret 2 * x;
+}
+`;
+
 // TODO now, one \n too much for single line comments
 const sourceCode1: str = `
 "test"j;
@@ -738,5 +745,5 @@ const sourceCode2: str = `//
 
 //console.log(CCUS.CCUStoASM(sourceCode2).preprocessedSourceCode);
 console.time();
-console.log(CCUS.getTokens(sourceCode1));
+console.log(CCUS.getTokens(sourceCode0));
 console.timeEnd();
