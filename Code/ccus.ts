@@ -195,12 +195,17 @@ class CCUS {
     codeLogicTree: t;
     asmInstructions: str[];
   } {
-    sourceCode = CCUSFile + sourceCode;
-    const originalSourceCode: str = sourceCode;
+    const originalSourceCode: str = sourceCode; // save the original code
+    sourceCode = CCUSFile + sourceCode; // add the default header
+
+    // lexer/tokenizer
     const tokens: token[] = this.getTokens(originalSourceCode);
+
     // check global folder for headers, then project folder and then local files
     const preprocessedCode: token[] = this.preprocess(tokens);
+
     const logicTree: any = this.logicAnalyser(preprocessedCode);
+
     const optimisedTree: any = this.optimiseTree(logicTree);
 
     return {
@@ -213,8 +218,6 @@ class CCUS {
   }
 
   public static getTokens(sourceCode: str): token[] {
-    // TODO: comments, keywords, symbols and identifiers inside string literals
-
     // comments (char by char)
     // literals (char by char/regexp)
 
@@ -225,7 +228,10 @@ class CCUS {
     // check for surviving characters beside whitespaces
 
     let code: str = sourceCode;
-    let lastUsedType: tokenType; // TODO, much better way
+    let lastUsedType:
+      | tokenType.identifier
+      | tokenType.literal
+      | tokenType.symbol; // TODO, much better way
     // TODO escaped comments, escaped escaped characters
 
     // escapes every character inside a string for new RegExp(string)_
@@ -252,9 +258,10 @@ class CCUS {
         .reduce((prev, cur) => prev + '|' + cur),
       'g'
     );
-    //const literalsRegex: RegExp =
-    //   /(?:true|false)|(?:[+-]?(?:0[dDbBoO][+-]?)?[0-9]+(?:\.[0-9]*)?(?:[eEpP][+-]?[0-9]+)?)|(?:"(?:\\"|[^"])*")/g;
     const identifierRegex: RegExp = /[_a-zA-Z][a-zA-Z0-9]*/g;
+    // TODO .5, 0x
+    const literalRegex: RegExp =
+      /(?:(?:0[bBdDoO])?[0-9]+(?:.[0-9]+)?(?:[eEpP][+-]?[0-9]+)?)/g;
 
     function replacer(match: str, offset: num, string: str): str {
       const token: token = {
@@ -284,136 +291,14 @@ class CCUS {
       const lineOfCode: str = string.slice(indexOfStart, indexOfEnd);
 
       switch (lastUsedType) {
-        case tokenType.comment:
-          return '';
-          // TODO, comment in string then comment => only one comment was sawn + it is the first one
-          // if the comment is inside a string
-          // TODO, get all the strings and check if the indexes of beginning and end are in between the offset
-          // if (startIndex < offset && endIndex > offset
-          //THIS
-          let matchIndexInLineOfCode: num = token.column;
-          //let matchIndexOfEndInLineOfCode: num = token.column + match.length;
-          // get indexes of none escaped " characters
-          // TODO what if " " // "
-          let indexes: num[] = [];
-          let isEscaped: bool = false;
-          for (let i = 0; i < lineOfCode.length; ++i) {
-            const char: str = lineOfCode[i];
-
-            // next character will be escaped if this one isnt escaped
-            if (char === '\\' && isEscaped === false) isEscaped = true;
-            else if (char === '"' && isEscaped !== true) indexes.push(i);
-            else if (isEscaped === true) isEscaped = false;
-
-            // TODO check for previous comments and if the " was inside them
-            // not possible as multiline comments are a thing
-          }
-          //console.log('indexes: ', indexes);
-          // lineOfCode
-          //   .split('')
-          //   .forEach((value, index) =>
-          //     value === '"' ? indexes.push(index) : 0
-          //   );
-          //console.log(match + '\n', indexes, matchIndexInLineOfCode);
-          let startIndexesOfStringLiterals: num[] = indexes.filter(
-            (v, i) => i % 2 === 0
-          );
-          let endIndexesOfStringLiterals: num[] = indexes.filter(
-            (v, i) => i % 2 === 1
-          );
-          if (
-            startIndexesOfStringLiterals.length !==
-            endIndexesOfStringLiterals.length
-          )
-            console.error(
-              '[LEXER]: ERROR\nDifferent amounts of opend string literals than closed literals: ' +
-                startIndexesOfStringLiterals.length +
-                ' opend, ' +
-                endIndexesOfStringLiterals.length +
-                ' closed\n'
-            );
-
-          //console.log(indexes, match);
-
-          for (let i = 0; i < startIndexesOfStringLiterals.length; ++i) {
-            if (
-              matchIndexInLineOfCode >= startIndexesOfStringLiterals[i] &&
-              matchIndexInLineOfCode <= endIndexesOfStringLiterals[i]
-            )
-              return match; // the comment is inside the string
-          }
-          // if (
-          //   lineOfCode.match(
-          //     new RegExp(
-          //       `".*${match}.*"`.replace(escapeStringForRegex, '\\$&'),
-          //       'g'
-          //     )
-          //   )
-          // )
-          //   return match;
-
-          comments.push(token);
-          break;
-        case tokenType.keyword:
-          // if before or after is an alphanumeric character it is not a keyword
-          if (
-            (offset !== 0 ? string[offset - 1].match(/[_a-zA-Z]/) : false) ||
-            string[offset + match.length].match(/[a-zA-Z]/)
-          )
-            return match;
-
-          // if it is inside a comment it is not a keyword
-          // TODO, get all the strings and check if the indexes of beginning and end are in between the offset
-          if (
-            lineOfCode.match(
-              new RegExp(
-                `".*${match.replace(escapeStringForRegex, '\\$&')}.*"`,
-                'g'
-              )
-            )
-          )
-            return match;
-
-          _keywords.push(token);
-          break;
         case tokenType.symbol:
-          // if it is inside a comment it is not a symbol
-          // TODO, get all the strings and check if the indexes of beginning and end are in between the offset
-          if (
-            lineOfCode.match(
-              new RegExp(
-                `".*${match.replace(escapeStringForRegex, '\\$&')}.*"`,
-                'g'
-              )
-            )
-          )
-            return match;
-
-          // TODO check if e.g. - or + is inside a number literal
-
           _symbols.push(token);
           break;
         case tokenType.literal:
-          return '';
-          // TODO, what if number literal inside string literal
+          // only numbers
           literals.push(token);
           break;
         case tokenType.identifier:
-          // if it is inside a comment it is not an identifier
-          // TODO, get all the strings and check if the indexes of beginning and end are in between the offset
-          if (
-            lineOfCode.match(
-              new RegExp(
-                `".*${match.replace(escapeStringForRegex, '\\$&')}.*"`,
-                'g'
-              )
-            )
-          )
-            return match;
-
-          // if it is 1 to 1 a keyword it is not an identifier
-          if (keywords.includes(match)) return match;
-
           identifiers.push(token);
           break;
       }
@@ -624,47 +509,65 @@ class CCUS {
         // #endregion
       }
 
-      // TODO now delete comments and strings in code
-      console.log(
-        code,
-        [...com, ...strs].sort((a, b) => (a.index < b.index ? -1 : 1))
-      );
+      // last character could have been skipped due to source code end
+      if (inStr === true) {
+        // commit and ignore the rest
+        strs.push({
+          content: curContent,
+          type: tokenType.literal,
+          index: lastIndex,
+          line:
+            code
+              .slice(0, lastIndex)
+              .split('')
+              .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
+          column: lastIndex - 1 - code.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+        });
+      } else if (inComment === true) {
+        // commit and ignore the rest
+        com.push({
+          content: curContent,
+          type: tokenType.comment,
+          index: lastIndex,
+          line:
+            code
+              .slice(0, lastIndex)
+              .split('')
+              .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
+          column: lastIndex - 1 - code.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+        });
+      }
+
+      // replace comments and strings in src code with empty spaces
+      for (const e of [...com, ...strs])
+        c =
+          c.substring(0, e.index) +
+          '\n'.repeat(e.content.split('').filter((c) => c === '\n').length) + // number of lines
+          ' '.repeat(e.content.split('').filter((c) => c !== '\n').length) + // number of spaces
+          c.substring(e.index + e.content.length, c.length);
 
       return { com: com, strs: strs, code: c };
     }
 
-    // get all the comments and replace them with whitespaces (space)
-    // for correct indexes later
-    //lastUsedType = tokenType.comment;
-    //code = code.replace(commentRegex, replacer);
-
-    const vals = commentsStrings(code);
+    // get all the comments and strings
+    // replace them with whitespaces (space) for correct indexes later
+    const vals: {
+      com: token[]; // comments
+      strs: token[]; // strings
+      code: str; // code with replaced strings and comments
+    } = commentsStrings(code);
     comments = vals.com;
     literals = vals.strs;
+    code = vals.code;
 
     // get all the literals and replace them with whitespaces
-    // TODO a lot of things, numbers: 0x support, strings are broken (identifiers, keywords, ...)
-    //lastUsedType = tokenType.literal;
-    //code = code.replace(literalsRegex, replacer);
+    lastUsedType = tokenType.literal;
+    code = code.replace(literalRegex, replacer);
 
     // get all the identifiers and replace them with whitespaces
     lastUsedType = tokenType.identifier;
     code = code.replace(identifierRegex, replacer);
-
-    // get all the symbols and replace them with whitespaces
-    lastUsedType = tokenType.symbol;
-    code = code.replace(symbolsRegex, replacer);
-
     // get all the keywords and replace them with whitespaces
-    // RegExp: num|func|... and escape every character if needed
-    //lastUsedType = tokenType.keyword;
-    //code = code.replace(keywordsRegex, replacer);
-
-    // TODO go through all the identifiers and check for keywords
-
-    // delete all the whitespace characters
-    //code = code.replace(/\n+/g, '').replace(/\t+/g, '').replace(/ +/g, '');
-
     identifiers = identifiers.filter((e) => {
       if (e.content.match(keywordsRegex) !== null) {
         _keywords.push(e);
@@ -672,9 +575,18 @@ class CCUS {
       } else return true;
     });
 
+    // get all the symbols and replace them with whitespaces
+    lastUsedType = tokenType.symbol;
+    code = code.replace(symbolsRegex, replacer);
+
     // check if there are remaining characters
-    if (code.match(/(?:\n|\t| )*/g) !== null)
-      console.error('[LEXER]: Unresolved characters in source code: ', code);
+    if (code.match(/[\n\t ]*/g).join('') !== code) {
+      console.error(
+        '[LEXER]: Unresolved characters in source code: ',
+        code.match(/[^\n\t]*/g).filter((s) => s.replace(/ /g, '').length !== 0)
+      );
+      // TODO get exact lines and columns for the unidentified characters
+    }
 
     return [
       ...comments,
@@ -702,23 +614,14 @@ class CCUS {
 
 // TODO now, one \n too much for single line comments
 const sourceCode1: str = `
- "\\"// not a comment"
-"\\"" // " this is a comment
-/* " */ // " comment
-/**//**/ // comments
-/* // */
-
-  /* " // " */
-/* *still comment */
-/* *\\/ still comment */ // TODO now
-/* " comment */ // comment "
-"//not a comment bug" // f(x) = 2x
-"/**/"
-"\\"" // " this is a comment
-//func f(num x) {
-//  "wrong //comment func ; correct comment ";
-//  ret 2 / x++; // g(i) = 3i
-//  ret x++ + (++y[]++)*x;}//
+"test"j;
+func f(num x) {
+  "wrong //comment func ; correct comment ";
+  ret 2 / x++; // g(i) = 3i
+  5.6;
+  0b1001.101;
+  .5;
+  ret x++ + (++y[]++)*x;}//
 //`;
 
 const sourceCode2: str = `//
@@ -732,7 +635,7 @@ const sourceCode2: str = `//
  /* / * kfldfl
  *
  *
- f
+
  / ***/
 "wrong comment"
   // just some empty line
@@ -834,4 +737,6 @@ const sourceCode2: str = `//
   //`;
 
 //console.log(CCUS.CCUStoASM(sourceCode2).preprocessedSourceCode);
-CCUS.getTokens(sourceCode1);
+console.time();
+console.log(CCUS.getTokens(sourceCode1));
+console.timeEnd();
