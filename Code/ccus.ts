@@ -235,7 +235,7 @@ class CCUS {
    */
   public static CCUStoASM(
     sourceCode: str,
-    headerFile?: bool
+    sources?: str[] // other files for use statement/keyword
   ): {
     originalSourceCode: str;
     tokensOfSourceCode: token[];
@@ -731,6 +731,7 @@ class CCUS {
     uses: str[];
   } {
     let useHeaders: str[] = [];
+    let defs: { literal: str; value: str }[] = [];
     // `use str (ONLY STR LITERAL, none id or var)` and `def id any \n` keywords
     // get all the use and def preprocessor statements
     // check if some use statements are double
@@ -739,23 +740,19 @@ class CCUS {
     // resolve def statements
     // `def once` / `use once` for #pragma once?
 
-    // use keyword
-    let skipNext: bool = false;
+    // "use" keyword
     for (let i = 0; i < tokens.length; ++i) {
-      if (skipNext) {
-        skipNext = false;
-        continue;
-      }
-
       const token: detailedToken = tokens[i];
 
       if (token.content === 'use') {
         if (
-          tokens.length < i + 1 &&
+          tokens.length > i + 1 &&
           tokens[i + 1].detailedType === detailedTokenType.strLiteral
         ) {
-          skipNext = true; // do not recheck this string literal
           useHeaders.push(tokens[i + 1].content);
+          tokens[i] = null; // remove the keyword and the string literal
+          tokens[i + 1] = null;
+          ++i; // do not check the next token (because it is the string literal)
         } else {
           // error used keyword `use` wrong because i+1 is not string literal
           console.error(
@@ -765,10 +762,76 @@ class CCUS {
       }
     }
 
+    // "def" keyword
+    for (let i = 0; i < tokens.length; ++i) {
+      const token: detailedToken = tokens[i];
+
+      if (token === null) continue;
+
+      if (token.content === 'def') {
+        // go through all indexes after this until the token is on the next line
+        // TODO check only the line after the identifier and not if it is on the same line as the def keyword
+        const curLine: num = token.line;
+
+        if (
+          tokens.length > i + 1 &&
+          tokens[i + 1].detailedType === detailedTokenType.identifier
+        ) {
+          defs.push({ literal: tokens[i + 1].content, value: 'VALUE' });
+          tokens[i] = null; // dont need the keyword token anymore
+        } else {
+          console.error(
+            '[Preprocessor]: Invalid use of the "def" keyword (keyword was not followed by an identifier).'
+          );
+        }
+
+        // TODO multi token definition
+        if (
+          tokens.length > i + 2 &&
+          tokens[i + 1].line === tokens[i + 2].line
+        ) {
+          defs[defs.length - 1].value = tokens[i + 2].content;
+          tokens[i + 1] = null; // dont need the identifier anymore
+          tokens[i + 2] = null; // dont need the value anymore
+        } else {
+          console.error(
+            '[Preprocessor]: Invalid use of the "def" keyword (keyword and identifier was not followed by a value on the same line).'
+          );
+        }
+      }
+    }
+
+    // remove finished tokens part 2
+    tokens = tokens.filter((e) => e !== null);
+
+    tokens.map((t) => {
+      // skip any none identifier types
+      if (t.detailedType !== detailedTokenType.identifier) return t;
+
+      let possibleDefs: {
+        literal: str;
+        value: str;
+      }[] = defs.filter((d) => d.literal === t.content);
+
+      // skip if it is a keyword not specified as a def
+      if (possibleDefs.length === 0) return t;
+
+      if (defs.length !== 1) {
+        // TODO error
+        console.error(
+          '[Preprocessor]: Invalid use of identifires for the "def" keyword (TODO INFO)'
+        );
+      } else t.content = possibleDefs[0].value;
+
+      return t;
+    });
+
+    console.log(defs);
+
     // TODO probably just make a list of to get header files (use)
     // and resovle them at a later stage to fix recursiv problems
 
-    return { t: tokens, uses: [] };
+    return { t: tokens, uses: useHeaders };
   }
 
   private static logicAnalyser(tokens: detailedToken[]): t {}
@@ -777,9 +840,13 @@ class CCUS {
 }
 
 const sourceCode0: str = `
+use "test"
+
+def y "str"
+
 // f(x) = 2x
 func f(num x) {
-  ret 5;
+  ret y;
 }
 `;
 
