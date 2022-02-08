@@ -38,7 +38,7 @@ enum tokenType {
   comment = 1, // //comment
   keyword = 2, // func, num
   symbol = 3, // +, -, ()
-  literal = 4, // 0, true, "hello"
+  numberLiteral = 4, // 0, true, "hello"
   identifier = 5 // myFunction, myVariable
 }
 
@@ -203,7 +203,8 @@ const symbols: str[] = [
   '<=', // is smaller or equal than
   '>=', // is bigger or equal than
   '=>', // short function
-  '...' // unpack operator
+  '...', // unpack operator
+  "'" // char
   //'_', // number seperator
   //'\\', // escape character in string
   //'//', // comment
@@ -286,7 +287,7 @@ class CCUS {
     let code: str = sourceCode;
     let lastUsedType:
       | tokenType.identifier
-      | tokenType.literal
+      | tokenType.numberLiteral
       | tokenType.symbol; // TODO, much better way
     // TODO escaped comments, escaped escaped characters
 
@@ -312,8 +313,8 @@ class CCUS {
     );
     const identifierRegex: RegExp = /[_a-zA-Z][a-zA-Z0-9]*/g;
     // TODO .5, 0x
-    const literalRegex: RegExp =
-      /(?:(?:0[bBdDoO])?[0-9]+(?:.[0-9]+)?(?:[eEpP][+-]?[0-9]+)?)/g;
+    const numRegex: RegExp =
+      /(?:(?:0[bBdDoO])?[_0-9]+(?:.[_0-9]+)?(?:[eEpP][+-]?[_0-9]+)?)/g;
 
     function replacer(match: str, offset: num, string: str): str {
       const token: token = {
@@ -346,7 +347,7 @@ class CCUS {
         case tokenType.symbol:
           _symbols.push(token);
           break;
-        case tokenType.literal:
+        case tokenType.numberLiteral:
           // only numbers
           literals.push(token);
           break;
@@ -412,7 +413,7 @@ class CCUS {
           curContent += char;
           strs.push({
             content: curContent,
-            type: tokenType.literal,
+            type: tokenType.numberLiteral,
             index: lastIndex,
             line:
               code
@@ -566,7 +567,7 @@ class CCUS {
         // commit and ignore the rest
         strs.push({
           content: curContent,
-          type: tokenType.literal,
+          type: tokenType.numberLiteral,
           index: lastIndex,
           line:
             code
@@ -612,10 +613,6 @@ class CCUS {
     literals = vals.strs;
     code = vals.code;
 
-    // get all the literals and replace them with whitespaces
-    lastUsedType = tokenType.literal;
-    code = code.replace(literalRegex, replacer);
-
     // get all the identifiers and replace them with whitespaces
     lastUsedType = tokenType.identifier;
     code = code.replace(identifierRegex, replacer);
@@ -630,6 +627,10 @@ class CCUS {
         return false;
       } else return true;
     });
+
+    // get all the literals and replace them with whitespaces
+    lastUsedType = tokenType.numberLiteral;
+    code = code.replace(numRegex, replacer);
 
     // get all the symbols and replace them with whitespaces
     lastUsedType = tokenType.symbol;
@@ -666,6 +667,8 @@ class CCUS {
       console.error(errorMsg);
     }
 
+    // TODO check for "'" + char + "'"
+
     return [
       ...comments,
       ..._keywords,
@@ -685,12 +688,12 @@ class CCUS {
     for (const t of tokens) {
       const curContent: str = t.content;
       const curType:
-        | tokenType.literal
+        | tokenType.numberLiteral
         | tokenType.keyword
         | tokenType.symbol
         | tokenType.identifier = t.type as any;
 
-      if (curType === tokenType.literal) {
+      if (curType === tokenType.numberLiteral) {
         // TODO replace with regex
         if (curContent.startsWith('"'))
           detailedTokens.push({
@@ -839,17 +842,12 @@ class CCUS {
 }
 
 const sourceCode0: str = `
-use
-   /**/
-   //
+use "test"
+def y "str"
 
-       "test"
-
-def     //
-         /**/                  y           "str"
-
-// f(x) = 2x
-func /**/ f(num x) {
+// f(x) = y
+func f(num x /* important comment */ ) {
+  char8 c = 'a';
   ret y;
 }
 `;
