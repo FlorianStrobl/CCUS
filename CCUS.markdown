@@ -17,3 +17,5 @@ func f(num x)
 ```
 
 ...
+
+Any code none comform to the standart will have per definition undefined behaviour for implementations of this language.

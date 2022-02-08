@@ -19,6 +19,8 @@ interface token {
   column: num; // in the line
 }
 
+interface detailedToken extends token {}
+
 enum tokenType {
   whitespaces = 0, // \n,  , \t
   comment = 1, // //comment
@@ -27,8 +29,15 @@ enum tokenType {
   literal = 4, // 0, true, "hello"
   identifier = 5 // myFunction, myVariable
 }
+
+enum keywordTypes {
+  type = 0, // intX, str
+  definition = 1, // func, op
+  statement = 2 // if, break
+}
 // #endregion
 
+// #region const
 const CCUSheader: str = `
 def false (bit)0
 def true (bit)1
@@ -44,65 +53,88 @@ use "ccussettings"
 `;
 
 // TODO serial vs parallel, async
-const keywords: str[] = [
-  'str', // strig variable
-  'num', // numeric variable
-  'bint', // big int (needed if num?)
-  //'buint', // bit uint (needed if num?)
-  'bit', // boolean variable (0 or 1)
-  'int8', // integers
-  'int16',
-  'int32',
-  'int64',
-  'uint8', // unsigned int
-  'uint16',
-  'uint32',
-  'uint64',
-  'float16', // decimal numbers (needed?)
-  'float32',
-  'float64',
-  'float128',
-  'float256', // ieee754 octuple precision (needed?)
-  'decimal32', // string formated floats (needed?)
-  'decimal64',
-  'decimal128',
-  'decimal256', // (needed?)
-  'decimal512', // (needed?)
-  'char8', // integer which can get read as a character/string
-  'char16',
-  'char32',
-  'char64', // (needed?)
-  'true', // boolean literal (not actually since it is a def)
-  'false', // boolean literal (not actually since it is a def)
-  'use', // use/include (/inc??) a (header, ccus) file
-  'def', // define a placeholder name for a value (preprocess)
-  'imp', // import public variables/functions/classes
-  'main', // entrypoint function
-  'out', // output to user
-  'in', // input from user
-  'func', // define a function
-  'interface', // for let or class
-  'let', // create a variable without specifing the type
-  'class', // define a class
-  'enum', // aliase from string to other type
-  'op', // operater overloading
-  'iterator', // TODO, for classes
-  'ret', // return from function
-  'throw', // error occured TODO (execption handling like that??)
-  'const', // constant variable/function (like static)
-  'static', // needed inside classes because const?
-  'ref', // referenz variable (can change value inside other context)
-  'if', // if statements
-  'else', // previous if statement was not executed so execute this statement (like an if)
-  'for', // for/loop loop (var x of vars)/(num i = 0; i < n; i++)/(boolean)/(number??) statement
-  'switch', // switch between multiple choices (like an if)
-  'break', // break inside a for loop/switch
-  'pub', // function/class/variable is accessible from other files/classes
-  'priv', // function/class/variable is not accessible from other files/classes/contextes
-  'prot', // function/class/variable is only accessible by derived classes
-  'of', // for for loops
-  'typeof', // get the type of a variable at runtime
-  'new' // create a new object
+const keywords: {
+  content: str; // raw string for keyword (/[_a-zA-Z][0-9a-zA-Z]*/
+  lexem?: bool; // if the lexer should check for this keyword
+  description?: str; // description for what this keyword is for
+  type?: keywordTypes; // intX if a type, func is a definition
+}[] = [
+  {
+    content: 'str',
+    lexem: true,
+    description: `Type for character arrays. # TODO needed if class itself`,
+    type: keywordTypes.type
+  },
+  {
+    content: 'num',
+    lexem: true,
+    description: `A variable type for every valid numeric type.`
+  },
+  {
+    content: 'bit',
+    lexem: true,
+    description: `A variable type for the integers 0 and 1.
+    This type behaves differently than the intX types.
+    Other languages may call this type "boolean".`
+  },
+  {
+    content: 'int8',
+    lexem: true,
+    description: `A variable type for integers.
+    Variables of this type take 8 bits, also called 1 byte.
+    Integers of this type can be between -128 and 127 (-2**7 to 2**7 - 1).`
+  }, // integers
+  { content: 'int16', lexem: true },
+  { content: 'int32', lexem: true },
+  { content: 'int64', lexem: true },
+  { content: 'intn', lexem: true }, // big int
+  { content: 'uint8', lexem: true }, // unsigned int
+  { content: 'uint16', lexem: true },
+  { content: 'uint32', lexem: true },
+  { content: 'uint64', lexem: true },
+  { content: 'float16', lexem: true }, // decimal numbers (needed?)
+  { content: 'float32', lexem: true },
+  { content: 'float64', lexem: true },
+  { content: 'float128', lexem: true },
+  { content: 'float256', lexem: true }, // ieee754 octuple precision (needed?)
+  { content: 'decimal32', lexem: true }, // string formated floats (needed?)
+  { content: 'decimal64', lexem: true },
+  { content: 'decimal128', lexem: true },
+  { content: 'decimal256', lexem: true }, // (needed?)
+  { content: 'decimal512', lexem: true }, // (needed?)
+  { content: 'char8', lexem: true }, // integer which can get read as a character/string
+  { content: 'charn', lexem: true }, // like UTF-8 variable size
+  { content: 'use', lexem: true }, // use/include (/inc??) a (header, ccus) file
+  { content: 'def', lexem: true }, // define a placeholder name for a value (preprocess)
+  { content: 'imp', lexem: true }, // import public variables/functions/classes
+  { content: 'func', lexem: true }, // define a function
+  { content: 'interface', lexem: true }, // for let or class
+  { content: 'let', lexem: true }, // create a variable without specifing the type
+  { content: 'class', lexem: true }, // define a class
+  { content: 'enum', lexem: true }, // aliase from string to other type
+  { content: 'op', lexem: true }, // operater overloading
+  { content: 'iterator', lexem: true }, // TODO, for classes
+  { content: 'ret', lexem: true }, // return from function
+  { content: 'throw', lexem: true }, // error occured TODO (execption handling like that??)
+  { content: 'const', lexem: true }, // constant variable/function (like static)
+  { content: 'static', lexem: true }, // needed inside classes because const?
+  { content: 'ref', lexem: true }, // referenz variable (can change value inside other context)
+  { content: 'if', lexem: true }, // if statements
+  { content: 'else', lexem: true }, // previous if statement was not executed so execute this statement (like an if)
+  { content: 'for', lexem: true }, // for/loop loop (var x of vars)/(num i = 0; i < n; i++)/(boolean)/(number??) statement
+  { content: 'switch', lexem: true }, // switch between multiple choices (like an if)
+  { content: 'break', lexem: true }, // break inside a for loop/switch
+  { content: 'pub', lexem: true }, // function/class/variable is accessible from other files/classes
+  { content: 'priv', lexem: true }, // function/class/variable is not accessible from other files/classes/contextes
+  { content: 'prot', lexem: true }, // function/class/variable is only accessible by derived classes
+  { content: 'of', lexem: true }, // for for loops
+  { content: 'typeof', lexem: true }, // get the type of a variable at runtime
+  { content: 'new', lexem: true }, // create a new object
+  { content: 'false', lexem: false }, // boolean literal (not actually since it is a def)
+  { content: 'true', lexem: false }, // boolean literal (not actually since it is a def)
+  { content: 'main', lexem: false }, // entrypoint function
+  { content: 'out', lexem: false }, // output to user
+  { content: 'in', lexem: false } // input from user
 ];
 
 const symbols: str[] = [
@@ -176,6 +208,7 @@ const symbols: str[] = [
   //'TAU', // 6.2831853071795862
   //'E' // 2.71828
 ];
+// #endregion
 
 class CCUS {
   constructor() {}
@@ -188,21 +221,31 @@ class CCUS {
   /**
    *
    */
-  public static CCUStoASM(sourceCode: str): {
+  public static CCUStoASM(
+    sourceCode: str,
+    headerFile?: bool
+  ): {
     originalSourceCode: str;
     tokensOfSourceCode: token[];
     preprocessedSourceCode: token[];
     codeLogicTree: t;
     asmInstructions: str[];
   } {
+    // TODO recursiv fix headerFile use statements
+
     const originalSourceCode: str = sourceCode; // save the original code
     sourceCode = CCUSFile + sourceCode; // add the default header
 
     // lexer/tokenizer
-    const tokens: token[] = this.getTokens(originalSourceCode);
+    const tokens: token[] = this.getTokens(sourceCode);
+
+    // filter comments and give the tokens more detailed descriptions
+    const importantTokens: detailedToken[] = this.updateTokens(tokens);
 
     // check global folder for headers, then project folder and then local files
-    const preprocessedCode: token[] = this.preprocess(tokens);
+    const preprocessedCode: detailedToken[] = this.preprocess(importantTokens);
+
+    console.log(preprocessedCode);
 
     const logicTree: any = this.logicAnalyser(preprocessedCode);
 
@@ -247,10 +290,6 @@ class CCUS {
     // new /(?:\/\/(?:[^/\n]|\/[^/\n]|\/$)*)|(?:\/\*.*\*\/)/gm
     //const commentRegex: RegExp =
     //  /(?:\/\/(?:[^/\n]|\/[^/\n]|\/$)*)|(?:\/\*.*\*\/)/gm;
-    const keywordsRegex: RegExp = new RegExp(
-      keywords.reduce((prev, cur) => prev + '|' + cur),
-      'g'
-    );
     const symbolsRegex: RegExp = new RegExp(
       symbols
         .sort((a, b) => (a.length < b.length ? 1 : -1))
@@ -567,9 +606,13 @@ class CCUS {
     // get all the identifiers and replace them with whitespaces
     lastUsedType = tokenType.identifier;
     code = code.replace(identifierRegex, replacer);
+
     // get all the keywords and replace them with whitespaces
     identifiers = identifiers.filter((e) => {
-      if (e.content.match(keywordsRegex) !== null) {
+      if (
+        keywords.some((kw) => kw.content === e.content && kw.lexem === true)
+      ) {
+        e.type = tokenType.keyword;
         _keywords.push(e);
         return false;
       } else return true;
@@ -581,11 +624,33 @@ class CCUS {
 
     // check if there are remaining characters
     if (code.match(/[\n\t ]*/g).join('') !== code) {
-      console.error(
-        '[LEXER]: Unresolved characters in source code: ',
-        code.match(/[^\n\t]*/g).filter((s) => s.replace(/ /g, '').length !== 0)
-      );
-      // TODO get exact lines and columns for the unidentified characters
+      // TODO more than one error
+
+      let indexOfErr: num = 0; // raw index
+
+      for (let i = 0; i < code.length; ++i)
+        if (code[i] !== '\n' && code[i] !== '\t' && code[i] !== ' ') {
+          indexOfErr = i;
+          break;
+        }
+
+      let line: num =
+        code
+          .slice(0, indexOfErr)
+          .split('')
+          .filter((e) => e === '\n').length + 1;
+      let column: num =
+        indexOfErr - 1 - code.slice(0, indexOfErr).lastIndexOf('\n');
+
+      // TODO now correct errors
+      let errorMsg: str =
+        `[LEXER]: Unresolved characters in source code at line ${line} and columne ${column}: ` +
+        code
+          .match(/[^\n\t]*/g)
+          .filter((s) => s.replace(/ /g, '').length !== 0)[0]
+          .replace(/ /g, '');
+
+      console.error(errorMsg);
     }
 
     return [
@@ -597,17 +662,42 @@ class CCUS {
     ].sort((a, b) => (a.index <= b.index ? -1 : 1));
   }
 
-  private static preprocess(tokens: token[]): token[] {
+  private static updateTokens(tokens: token[]): detailedToken[] {
     // remove whitespaces and comments
     tokens = tokens.filter(
       (t) => t.type !== tokenType.whitespaces && t.type !== tokenType.comment
     );
-    // use and def keywords
-    // check if they are used properly
+
+    const detailedTokens = [];
+    for (const t of tokens) {
+      const curContent: str = t.content;
+      const curType:
+        | tokenType.identifier
+        | tokenType.keyword
+        | tokenType.literal
+        | tokenType.symbol = t.type as any;
+      detailedTokens.push(t);
+    }
+
+    return detailedTokens;
+  }
+
+  private static preprocess(tokens: detailedToken[]): detailedToken[] {
+    // `use str (ONLY STR LITERAL, none id or var)` and `def id any \n` keywords
+    // get all the use and def preprocessor statements
+    // check if some use statements are double
+    // check if some def statements are double
+    // resolve use statements
+    // resolve def statements
+    // `def once` / `use once` for #pragma once?
+
+    // TODO probably just make a list of to get header files (use)
+    // and resovle them at a later stage to fix recursiv problems
+
     return tokens;
   }
 
-  private static logicAnalyser(tokens: token[]): t {}
+  private static logicAnalyser(tokens: detailedToken[]): t {}
 
   private static optimiseTree(logicTree: t): t {}
 }
@@ -615,7 +705,7 @@ class CCUS {
 const sourceCode0: str = `
 // f(x) = 2x
 func f(num x) {
-  ret 2 * x;
+  ret 5;
 }
 `;
 
@@ -745,5 +835,5 @@ const sourceCode2: str = `//
 
 //console.log(CCUS.CCUStoASM(sourceCode2).preprocessedSourceCode);
 console.time();
-console.log(CCUS.getTokens(sourceCode0));
+CCUS.CCUStoASM(sourceCode0);
 console.timeEnd();
