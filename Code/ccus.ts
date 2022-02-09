@@ -843,6 +843,83 @@ class CCUS {
   private static optimiseTree(logicTree: t): t {}
 }
 
+class AST {
+  private leftNode: AST;
+  private rightNode: AST;
+  public data: { content: str; type: detailedTokenType };
+
+  constructor(leftNode: AST = null, rightNode: AST = null) {
+    this.leftNode = leftNode;
+    this.rightNode = rightNode;
+  }
+
+  public setLeft(abs: AST): void {
+    this.leftNode = abs;
+  }
+
+  public setRight(abs: AST): void {
+    this.rightNode = abs;
+  }
+
+  public getLeft(): AST {
+    return this.leftNode;
+  }
+
+  public getRight(): AST {
+    return this.rightNode;
+  }
+}
+
+let t8 = new AST();
+t8.data = { content: 'left left left', type: 0 };
+let t9 = new AST();
+t9.data = { content: 'right left left', type: 0 };
+let t10 = new AST();
+t10.data = { content: 'left right left', type: 0 };
+let t11 = new AST();
+t11.data = { content: 'right right left', type: 0 };
+let t12 = new AST();
+t12.data = { content: 'left left right', type: 0 };
+let t13 = new AST();
+t13.data = { content: 'right left right', type: 0 };
+let t14 = new AST();
+t14.data = { content: 'left right right', type: 0 };
+let t15 = new AST();
+t15.data = { content: 'right right right', type: 0 };
+
+let t4 = new AST(t8, t12);
+t4.data = { content: 'left left', type: 0 };
+let t5 = new AST(t9, t13);
+t5.data = { content: 'right left', type: 0 };
+let t6 = new AST(t10, t14);
+t6.data = { content: 'left right', type: 0 };
+let t7 = new AST(t11, t15);
+t7.data = { content: 'right right', type: 0 };
+
+let t2 = new AST(t4, t6);
+t2.data = { content: 'left', type: 0 };
+let t3 = new AST(t5, t7);
+t3.data = { content: 'right', type: 0 };
+let tree = new AST(t2, t3);
+tree.data = { content: 'start', type: 0 };
+
+function traverseAllNodes(node: AST, currentValues: str[] = []): str[] {
+  // base case
+  if (node === null) return currentValues;
+
+  // add current content
+  currentValues.push(node.data.content);
+
+  // add every left node
+  currentValues = traverseAllNodes(node.getLeft(), currentValues);
+  // add every right node
+  currentValues = traverseAllNodes(node.getRight(), currentValues);
+
+  return currentValues;
+}
+
+console.log(traverseAllNodes(tree));
+
 const sourceCode0: str = `
 use "test"
 /*def once*/
