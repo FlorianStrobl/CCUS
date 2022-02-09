@@ -1,7 +1,7 @@
 class AST {
   private leftNode: AST;
   private rightNode: AST;
-  public data: { content: str; type: detailedTokenType };
+  public data: { content: string; type: number };
 
   constructor(leftNode: AST = null, rightNode: AST = null) {
     this.leftNode = leftNode;
@@ -42,6 +42,7 @@ class AST {
   }
 }
 
+// #region data
 let t8 = new AST();
 t8.data = { content: 'left left left', type: 0 };
 let t9 = new AST();
@@ -74,8 +75,12 @@ let t3 = new AST(t5, t7);
 t3.data = { content: 'right', type: 0 };
 let tree = new AST(t2, t3);
 tree.data = { content: 'start', type: 0 };
+// #endregion
 
-function traverseAllNodesOnce(node: AST, currentValues: str[] = []): str[] {
+function traverseAllNodesOnce(
+  node: AST,
+  currentValues: string[] = []
+): string[] {
   // base case
   if (node === null) return currentValues;
 
