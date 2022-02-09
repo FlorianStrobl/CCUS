@@ -861,12 +861,29 @@ class AST {
     this.rightNode = abs;
   }
 
-  public getLeft(): AST {
+  public getLeft(): AST | null {
     return this.leftNode;
   }
 
-  public getRight(): AST {
+  public getRight(): AST | null {
     return this.rightNode;
+  }
+
+  public goWay(way: (true | false)[]): AST | null {
+    // base case
+    if (way.length === 0) return this;
+
+    // check if next node is null
+    if (way[0] === true && this.leftNode === null) return null;
+    else if (way[0] === false && this.rightNode === null) return null;
+
+    // for each node
+    for (const w of way)
+      if (w === true)
+        // go one node to the left
+        return this.leftNode.goWay(way.slice(1));
+      // go one node to the right
+      else return this.rightNode.goWay(way.slice(1));
   }
 }
 
@@ -903,7 +920,7 @@ t3.data = { content: 'right', type: 0 };
 let tree = new AST(t2, t3);
 tree.data = { content: 'start', type: 0 };
 
-function traverseAllNodes(node: AST, currentValues: str[] = []): str[] {
+function traverseAllNodesOnce(node: AST, currentValues: str[] = []): str[] {
   // base case
   if (node === null) return currentValues;
 
@@ -911,14 +928,15 @@ function traverseAllNodes(node: AST, currentValues: str[] = []): str[] {
   currentValues.push(node.data.content);
 
   // add every left node
-  currentValues = traverseAllNodes(node.getLeft(), currentValues);
+  currentValues = traverseAllNodesOnce(node.getLeft(), currentValues);
   // add every right node
-  currentValues = traverseAllNodes(node.getRight(), currentValues);
+  currentValues = traverseAllNodesOnce(node.getRight(), currentValues);
 
   return currentValues;
 }
 
-console.log(traverseAllNodes(tree));
+console.log(traverseAllNodesOnce(tree));
+console.log(tree.goWay([false, true, true]));
 
 const sourceCode0: str = `
 use "test"
