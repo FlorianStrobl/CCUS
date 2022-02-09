@@ -30,7 +30,9 @@ enum detailedTokenType {
   strLiteral = 1,
   charLiteral = 2,
   numLiteral = 3,
-  identifier = 4
+  identifier = 4,
+  keyword = 5,
+  symbol = 6
 }
 
 enum tokenType {
@@ -717,10 +719,10 @@ class CCUS {
         });
       } else if (curType === tokenType.keyword) {
         // TODO
-        detailedTokens.push({ ...t, detailedType: detailedTokenType.none });
+        detailedTokens.push({ ...t, detailedType: detailedTokenType.keyword });
       } else if (curType === tokenType.symbol) {
         // TODO
-        detailedTokens.push({ ...t, detailedType: detailedTokenType.none });
+        detailedTokens.push({ ...t, detailedType: detailedTokenType.symbol });
       } else {
         detailedTokens.push({ ...t, detailedType: detailedTokenType.none });
       }
@@ -781,7 +783,7 @@ class CCUS {
           tokens[i + 1].detailedType === detailedTokenType.identifier
         ) {
           // TODO empty value or set to 1 for boolean?
-          defs.push({ literal: tokens[i + 1].content, value: '' });
+          defs.push({ literal: tokens[i + 1].content, value: '1' });
           tokens[i] = null; // dont need the keyword token anymore
         } else {
           console.error(
@@ -798,7 +800,7 @@ class CCUS {
           tokens[i + 1] = null; // dont need the identifier anymore
           tokens[i + 2] = null; // dont need the value anymore
         } else {
-          console.error(
+          console.warn(
             '[Preprocessor]: Invalid use of the "def" keyword (keyword and identifier was not followed by a value on the same line).'
           );
         }
@@ -843,11 +845,12 @@ class CCUS {
 
 const sourceCode0: str = `
 use "test"
+/*def once*/
 def y "str"
 
 // f(x) = y
 func f(num x /* important comment */ ) {
-  char8 c = 'a';
+  char8 c = 'a'; // TODO add char literal
   ret y;
 }
 `;
