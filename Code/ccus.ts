@@ -316,34 +316,30 @@ class CCUS {
     const identifierRegex: RegExp = /[_a-zA-Z][a-zA-Z0-9]*/g;
     // TODO .5, 0x
     const numRegex: RegExp =
-      /(?:(?:0[bBdDoO])?[_0-9]+(?:.[_0-9]+)?(?:[eEpP][+-]?[_0-9]+)?)/g;
+      /(?:(?:0[bBdDoO])?[_0-9]+(?:.[_0-9]+)?(?:[eEpP][+-]?[_0-9]+)?)|(?:'(?:[0-9a-zA-Z_+\-*/@$#=]|\\n[0-9]{1,4})')/g;
 
     function replacer(match: str, offset: num, string: str): str {
       const token: token = {
         content: match,
         type: lastUsedType,
         index: offset,
-        line:
-          string
-            .slice(0, offset)
-            .split('')
-            .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
-        column: offset - 1 - string.slice(0, offset).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+        line: this.getPosition(offset, string).line,
+        column: this.getPosition(offset, string).column
       };
 
       // index of the start of the line
       let indexOfStart: num = string.slice(0, offset).lastIndexOf('\n');
       if (indexOfStart === -1) indexOfStart = 0;
       // index of the end of the line
-      const indexOfEnd: num =
-        string
-          .slice(indexOfStart + 1)
-          .split('')
-          .indexOf('\n') +
-        indexOfStart +
-        2;
+      // const indexOfEnd: num =
+      //   string
+      //     .slice(indexOfStart + 1)
+      //     .split('')
+      //     .indexOf('\n') +
+      //   indexOfStart +
+      //   2;
       // the current line of code
-      const lineOfCode: str = string.slice(indexOfStart, indexOfEnd);
+      //const lineOfCode: str = string.slice(indexOfStart, indexOfEnd);
 
       switch (lastUsedType) {
         case tokenType.symbol:
@@ -650,13 +646,9 @@ class CCUS {
           break;
         }
 
-      let line: num =
-        code
-          .slice(0, indexOfErr)
-          .split('')
-          .filter((e) => e === '\n').length + 1;
-      let column: num =
-        indexOfErr - 1 - code.slice(0, indexOfErr).lastIndexOf('\n');
+      let line: num = this.getPosition(indexOfErr, code).line;
+
+      let column: num = this.getPosition(indexOfErr, code).column;
 
       // TODO now correct errors
       let errorMsg: str =
@@ -841,6 +833,20 @@ class CCUS {
   private static logicAnalyser(tokens: detailedToken[]): t {}
 
   private static optimiseTree(logicTree: t): t {}
+
+  private static getPosition(
+    rawIndex: num,
+    str: str
+  ): { line: num; column: num } {
+    return {
+      line:
+        str
+          .slice(0, rawIndex)
+          .split('')
+          .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length,
+      column: rawIndex - 1 - str.slice(0, rawIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+    };
+  }
 }
 
 const sourceCode0: str = `
