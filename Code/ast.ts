@@ -40,6 +40,24 @@ class AST {
       // go one node to the right
       else return this.rightNode.goWay(way.slice(1));
   }
+
+  public static traverseAllChilds(
+    node: AST,
+    currentValues: string[] = []
+  ): string[] {
+    // base case
+    if (node === null) return currentValues;
+
+    // add current content
+    currentValues.push(node.data.content);
+
+    // add every left node
+    currentValues = AST.traverseAllChilds(node.getLeft(), currentValues);
+    // add every right node
+    currentValues = AST.traverseAllChilds(node.getRight(), currentValues);
+
+    return currentValues;
+  }
 }
 
 // #region data
@@ -77,23 +95,5 @@ let tree = new AST(t2, t3);
 tree.data = { content: 'start', type: 0 };
 // #endregion
 
-function traverseAllNodesOnce(
-  node: AST,
-  currentValues: string[] = []
-): string[] {
-  // base case
-  if (node === null) return currentValues;
-
-  // add current content
-  currentValues.push(node.data.content);
-
-  // add every left node
-  currentValues = traverseAllNodesOnce(node.getLeft(), currentValues);
-  // add every right node
-  currentValues = traverseAllNodesOnce(node.getRight(), currentValues);
-
-  return currentValues;
-}
-
-console.log(traverseAllNodesOnce(tree));
+console.log(AST.traverseAllChilds(tree));
 console.log(tree.goWay([false, true, true]));
