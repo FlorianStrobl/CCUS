@@ -1,0 +1,11 @@
+use "test"
+/*def once*/
+def y "str"
+
+// f(x) = y
+func ff(num x /* important comment */ ) {
+  char8 c = 'a'; // TODO add char literal
+  char8 c2 = '\\n51';
+  str s = "my string"j;
+  ret y + 3;
+}

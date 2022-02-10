@@ -3,5 +3,12 @@
     "target": "ESNEXT",
     "lib": ["ESNEXT", "DOM", "ESNEXT.String"]
   },
-  "include": ["C:\\Users\\Flori\\node_modules\\@types\\node", "src/**/*.d.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "C:/Users/Flori/node_modules/@types/node"
+  ]
 }

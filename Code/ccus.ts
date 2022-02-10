@@ -3,6 +3,8 @@
 // html, css, latex and regex equivalent string options
 // systemverilog
 
+import { getCode } from './fileReader';
+
 // TODO char literals, array literals
 
 /* parser:
@@ -993,5 +995,5 @@ const sourceCode2: str = `//
 
 //console.log(CCUS.CCUStoASM(sourceCode2).preprocessedSourceCode);
 console.time();
-CCUS.CCUStoASM(sourceCode0);
+CCUS.CCUStoASM(getCode());
 console.timeEnd();
