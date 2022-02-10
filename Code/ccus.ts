@@ -3,7 +3,17 @@
 // html, css, latex and regex equivalent string options
 // systemverilog
 
-// TODO char literals
+// TODO char literals, array literals
+
+/* parser:
+ * literal;
+ * let static? const? read? identifier;
+ * let static? const? read? identifier = literal | identifier | mathExpression;
+ * if (bit | bitExpression) statement
+ * for (bit) // while
+ * for (number) statement
+ * for (let static? const? read? identifier : identifier | arrayLiteral) statement // TODO destructor
+ */
 
 // #region types
 type bool = boolean;
@@ -416,12 +426,8 @@ class CCUS {
             content: curContent,
             type: tokenType.literals,
             index: lastIndex,
-            line:
-              code
-                .slice(0, lastIndex)
-                .split('')
-                .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
-            column: lastIndex - 1 - code.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+            line: CCUS.getPosition(lastIndex, code).line,
+            column: CCUS.getPosition(lastIndex, code).column
           });
           curContent = '';
           lastIndex = 0;
@@ -496,12 +502,8 @@ class CCUS {
             content: curContent,
             type: tokenType.comment,
             index: lastIndex,
-            line:
-              c
-                .slice(0, lastIndex)
-                .split('')
-                .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
-            column: lastIndex - 1 - c.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+            line: CCUS.getPosition(lastIndex, c).line,
+            column: CCUS.getPosition(lastIndex, c).column
           });
           inComment = false;
           commentType = 0; // reset all values
@@ -531,12 +533,8 @@ class CCUS {
             content: curContent,
             type: tokenType.comment,
             index: lastIndex,
-            line:
-              c
-                .slice(0, lastIndex)
-                .split('')
-                .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
-            column: lastIndex - 1 - c.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+            line: CCUS.getPosition(lastIndex, c).line,
+            column: CCUS.getPosition(lastIndex, c).column
           });
           inComment = false; // reset values
           curContent = '';
@@ -570,12 +568,8 @@ class CCUS {
           content: curContent,
           type: tokenType.literals,
           index: lastIndex,
-          line:
-            code
-              .slice(0, lastIndex)
-              .split('')
-              .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
-          column: lastIndex - 1 - code.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+          line: CCUS.getPosition(lastIndex, c).line,
+          column: CCUS.getPosition(lastIndex, c).column
         });
       } else if (inComment === true) {
         // commit and ignore the rest
@@ -583,14 +577,21 @@ class CCUS {
           content: curContent,
           type: tokenType.comment,
           index: lastIndex,
-          line:
-            code
-              .slice(0, lastIndex)
-              .split('')
-              .filter((e) => e === '\n').length + 1, // linesBeforeMatch.length
-          column: lastIndex - 1 - code.slice(0, lastIndex).lastIndexOf('\n') // (offset) - lastLine (TODO what if no \n => -1)
+          line: CCUS.getPosition(lastIndex, c).line,
+          column: CCUS.getPosition(lastIndex, c).column
         });
       }
+
+      // TODO special types of strings
+      // j == json literal, r == regex literal, h == html literal, f == formatted, l == latex, m == markdown
+      for (const e of strs)
+        if (e.content.length + e.index < c.length)
+          if (
+            ['j', 'r', 'h', 'f', 'l', 'm'].includes(
+              c[e.content.length + e.index]
+            )
+          )
+            e.content += c[e.content.length + e.index];
 
       // replace comments and strings in src code with empty spaces
       for (const e of [...com, ...strs])
@@ -861,6 +862,7 @@ def y "str"
 func f(num x /* important comment */ ) {
   char8 c = 'a'; // TODO add char literal
   char8 c2 = '\\n51';
+  str s = "my string"j;
   ret y + 3;
 }
 `;
