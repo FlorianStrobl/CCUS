@@ -73,8 +73,7 @@ const CCUSSettingsHeader: str = `
 
 `;
 
-const CCUSFile: str = `
-use "ccus"
+const CCUSFile: str = `use "ccus"
 use "ccussettings"
 `;
 
@@ -261,7 +260,7 @@ class CCUS {
     // TODO recursiv fix headerFile use statements
 
     const originalSourceCode: str = sourceCode; // save the original code
-    sourceCode = CCUSFile + sourceCode; // add the default header
+    sourceCode = sourceCode + '\n' + CCUSFile; // add the default header, at the end because line count is wrong else
 
     // lexer/tokenizer
     const tokens: token[] = this.getTokens(sourceCode);
@@ -270,19 +269,19 @@ class CCUS {
     const importantTokens: detailedToken[] = this.updateTokens(tokens);
 
     // check global folder for headers, then project folder and then local files
-    const preprocessedCode: { t: detailedToken[]; uses: str[] } =
+    const preprocessedCode: { detailedTokens: detailedToken[]; uses: str[] } =
       this.preprocess(importantTokens);
 
     console.log(preprocessedCode);
 
-    const logicTree: any = this.logicAnalyser(preprocessedCode.t);
+    const logicTree: any = this.logicAnalyser(preprocessedCode.detailedTokens);
 
     const optimisedTree: any = this.optimiseTree(logicTree);
 
     return {
       originalSourceCode: originalSourceCode,
       tokensOfSourceCode: tokens,
-      preprocessedSourceCode: preprocessedCode.t,
+      preprocessedSourceCode: preprocessedCode.detailedTokens,
       codeLogicTree: optimisedTree,
       asmInstructions: []
     };
@@ -641,7 +640,7 @@ class CCUS {
     code = code.replace(symbolsRegex, replacer);
 
     // check if there are remaining characters
-    if (code.match(/[\n\t ]*/g).join('') !== code) {
+    if (code.match(/[\n\t ]*/g)?.join('') !== code) {
       // TODO more than one error
 
       let indexOfErr: num = 0; // raw index
@@ -661,7 +660,7 @@ class CCUS {
         `[LEXER]: Unresolved characters in source code at line ${line} and columne ${column}: ` +
         code
           .match(/[^\n\t]*/g)
-          .filter((s) => s.replace(/ /g, '').length !== 0)[0]
+          ?.filter((s) => s.replace(/ /g, '').length !== 0)[0]
           .replace(/ /g, '');
 
       console.error(errorMsg);
@@ -729,8 +728,8 @@ class CCUS {
     return detailedTokens;
   }
 
-  private static preprocess(tokens: detailedToken[]): {
-    t: detailedToken[];
+  private static preprocess(tokens: (detailedToken | null)[]): {
+    detailedTokens: detailedToken[];
     uses: str[];
   } {
     let useHeaders: str[] = [];
@@ -745,14 +744,14 @@ class CCUS {
 
     // "use" keyword
     for (let i = 0; i < tokens.length; ++i) {
-      const token: detailedToken = tokens[i];
+      const token: detailedToken | null = tokens[i];
 
-      if (token.content === 'use') {
+      if (token !== null && token.content === 'use') {
         if (
           tokens.length > i + 1 &&
-          tokens[i + 1].detailedType === detailedTokenType.strLiteral
+          tokens[i + 1]?.detailedType === detailedTokenType.strLiteral
         ) {
-          useHeaders.push(tokens[i + 1].content);
+          if (tokens[i + 1] !== null) useHeaders.push(tokens[i + 1]!.content);
           tokens[i] = null; // remove the keyword and the string literal
           tokens[i + 1] = null;
           ++i; // do not check the next token (because it is the string literal)
@@ -767,7 +766,7 @@ class CCUS {
 
     // "def" keyword
     for (let i = 0; i < tokens.length; ++i) {
-      const token: detailedToken = tokens[i];
+      const token: detailedToken | null = tokens[i];
 
       if (token === null) continue;
 
@@ -777,11 +776,12 @@ class CCUS {
         const curLine: num = token.line;
 
         if (
+          tokens[i + 1] !== null &&
           tokens.length > i + 1 &&
-          tokens[i + 1].detailedType === detailedTokenType.identifier
+          tokens[i + 1]!.detailedType === detailedTokenType.identifier
         ) {
           // TODO empty value or set to 1 for boolean?
-          defs.push({ literal: tokens[i + 1].content, value: '1' });
+          defs.push({ literal: tokens[i + 1]!.content, value: '1' });
           tokens[i] = null; // dont need the keyword token anymore
         } else {
           console.error(
@@ -791,10 +791,12 @@ class CCUS {
 
         // TODO multi token definition
         if (
+          tokens[i + 1] !== null &&
+          tokens[i + 2] !== null &&
           tokens.length > i + 2 &&
-          tokens[i + 1].line === tokens[i + 2].line
+          tokens[i + 1]!.line === tokens[i + 2]!.line
         ) {
-          defs[defs.length - 1].value = tokens[i + 2].content;
+          defs[defs.length - 1].value = tokens[i + 2]!.content;
           tokens[i + 1] = null; // dont need the identifier anymore
           tokens[i + 2] = null; // dont need the value anymore
         } else {
@@ -810,7 +812,7 @@ class CCUS {
 
     tokens.map((t) => {
       // skip any none identifier types
-      if (t.detailedType !== detailedTokenType.identifier) return t;
+      if (t?.detailedType !== detailedTokenType.identifier) return t;
 
       let possibleDefs: {
         literal: str;
@@ -825,7 +827,7 @@ class CCUS {
         console.error(
           '[Preprocessor]: Invalid use of identifires for the "def" keyword (TODO INFO)'
         );
-      } else t.content = possibleDefs[0].value;
+      } else if (t !== null) t.content = possibleDefs[0].value;
 
       return t;
     });
@@ -833,7 +835,9 @@ class CCUS {
     // TODO probably just make a list of to get header files (use)
     // and resovle them at a later stage to fix recursiv problems
 
-    return { t: tokens, uses: useHeaders };
+    // TODO
+    // @ts-ignore
+    return { detailedTokens: tokens === null ? [] : tokens, uses: useHeaders };
   }
 
   private static logicAnalyser(tokens: detailedToken[]): t {}
