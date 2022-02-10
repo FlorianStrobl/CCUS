@@ -40,7 +40,7 @@ enum tokenType {
   comment = 1, // //comment
   keyword = 2, // func, num
   symbol = 3, // +, -, ()
-  numberLiteral = 4, // 0, true, "hello"
+  literals = 4, // 0, true, "hello"
   identifier = 5 // myFunction, myVariable
 }
 
@@ -289,7 +289,7 @@ class CCUS {
     let code: str = sourceCode;
     let lastUsedType:
       | tokenType.identifier
-      | tokenType.numberLiteral
+      | tokenType.literals
       | tokenType.symbol; // TODO, much better way
     // TODO escaped comments, escaped escaped characters
 
@@ -315,16 +315,16 @@ class CCUS {
     );
     const identifierRegex: RegExp = /[_a-zA-Z][a-zA-Z0-9]*/g;
     // TODO .5, 0x
-    const numRegex: RegExp =
-      /(?:(?:0[bBdDoO])?[_0-9]+(?:.[_0-9]+)?(?:[eEpP][+-]?[_0-9]+)?)|(?:'(?:[0-9a-zA-Z_+\-*/@$#=]|\\n[0-9]{1,4})')/g;
+    const literalsRegex: RegExp =
+      /(?:(?:0[bBdDoO])?[_0-9]+(?:.[_0-9]+)?(?:[eEpP][+-]?[_0-9]+)?)|(?:'(?:[0-9a-zA-Z_+\-*/@$#=]|\\n[0-9]{1,4})'[a-z]?)/g;
 
     function replacer(match: str, offset: num, string: str): str {
       const token: token = {
         content: match,
         type: lastUsedType,
         index: offset,
-        line: this.getPosition(offset, string).line,
-        column: this.getPosition(offset, string).column
+        line: CCUS.getPosition(offset, string).line,
+        column: CCUS.getPosition(offset, string).column
       };
 
       // index of the start of the line
@@ -345,11 +345,14 @@ class CCUS {
         case tokenType.symbol:
           _symbols.push(token);
           break;
-        case tokenType.numberLiteral:
+        case tokenType.literals:
           // only numbers
           literals.push(token);
           break;
         case tokenType.identifier:
+          // TODO fix chars
+          if (string[offset - 1] === "'" || string[offset - 2] === "'")
+            return match;
           identifiers.push(token);
           break;
       }
@@ -411,7 +414,7 @@ class CCUS {
           curContent += char;
           strs.push({
             content: curContent,
-            type: tokenType.numberLiteral,
+            type: tokenType.literals,
             index: lastIndex,
             line:
               code
@@ -565,7 +568,7 @@ class CCUS {
         // commit and ignore the rest
         strs.push({
           content: curContent,
-          type: tokenType.numberLiteral,
+          type: tokenType.literals,
           index: lastIndex,
           line:
             code
@@ -627,8 +630,8 @@ class CCUS {
     });
 
     // get all the literals and replace them with whitespaces
-    lastUsedType = tokenType.numberLiteral;
-    code = code.replace(numRegex, replacer);
+    lastUsedType = tokenType.literals;
+    code = code.replace(literalsRegex, replacer);
 
     // get all the symbols and replace them with whitespaces
     lastUsedType = tokenType.symbol;
@@ -646,9 +649,9 @@ class CCUS {
           break;
         }
 
-      let line: num = this.getPosition(indexOfErr, code).line;
+      let line: num = CCUS.getPosition(indexOfErr, code).line;
 
-      let column: num = this.getPosition(indexOfErr, code).column;
+      let column: num = CCUS.getPosition(indexOfErr, code).column;
 
       // TODO now correct errors
       let errorMsg: str =
@@ -682,12 +685,12 @@ class CCUS {
     for (const t of tokens) {
       const curContent: str = t.content;
       const curType:
-        | tokenType.numberLiteral
+        | tokenType.literals
         | tokenType.keyword
         | tokenType.symbol
         | tokenType.identifier = t.type as any;
 
-      if (curType === tokenType.numberLiteral) {
+      if (curType === tokenType.literals) {
         // TODO replace with regex
         if (curContent.startsWith('"'))
           detailedTokens.push({
@@ -857,7 +860,8 @@ def y "str"
 // f(x) = y
 func f(num x /* important comment */ ) {
   char8 c = 'a'; // TODO add char literal
-  ret y;
+  char8 c2 = '\\n51';
+  ret y + 3;
 }
 `;
 
