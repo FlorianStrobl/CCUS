@@ -37,6 +37,11 @@ interface detailedToken extends token {
   detailedType: detailedTokenType;
 }
 
+interface position {
+  line: num;
+  column: num;
+}
+
 enum detailedTokenType {
   none = 0, // invalid token type
   strLiteral = 1,
@@ -131,6 +136,13 @@ const keywords: {
   { content: 'charn', lexem: true }, // like UTF-8 variable size
   { content: 'use', lexem: true }, // use/include (/inc??) a (header, ccus) file
   { content: 'def', lexem: true }, // define a placeholder name for a value (preprocess)
+  { content: 'undef', lexem: true }, //
+  { content: 'ifdef', lexem: true }, //
+  { content: 'elsedef', lexem: true }, //
+  { content: 'enddef', lexem: true }, //
+  { content: 'notdef', lexem: true }, //
+  { content: 'anddef', lexem: true }, //
+  { content: 'ordef', lexem: true }, //
   { content: 'imp', lexem: true }, // import public variables/functions/classes
   { content: 'func', lexem: true }, // define a function
   { content: 'interface', lexem: true }, // for let or class
@@ -154,9 +166,12 @@ const keywords: {
   { content: 'prot', lexem: true }, // function/class/variable is only accessible by derived classes
   { content: 'of', lexem: true }, // for for loops
   { content: 'typeof', lexem: true }, // get the type of a variable at runtime
+  { content: 'try', lexem: true }, // try executing code which could be invalid
+  { content: 'catch', lexem: true }, // gets called if a try block was invalid
   { content: 'new', lexem: true }, // create a new object
-  { content: 'false', lexem: false }, // boolean literal (not actually since it is a def)
+  { content: 'asm', lexem: true }, // write literal asm in the file with: asm {}
   { content: 'true', lexem: false }, // boolean literal (not actually since it is a def)
+  { content: 'false', lexem: false }, // boolean literal (not actually since it is a def)
   { content: 'main', lexem: false }, // entrypoint function
   { content: 'out', lexem: false }, // output to user
   { content: 'in', lexem: false } // input from user
@@ -327,7 +342,7 @@ class CCUS {
     const identifierRegex: RegExp = /[_a-zA-Z][a-zA-Z0-9]*/g;
     // TODO .5, 0x
     const literalsRegex: RegExp =
-      /(?:(?:0[bBdDoO])?[_0-9]+(?:.[_0-9]+)?(?:[eEpP][+-]?[_0-9]+)?)|(?:'(?:[0-9a-zA-Z_+\-*/@$#=]|\\n[0-9]{1,4})'[a-z]?)/g;
+      /(?:(?:0[bBdDoO])?[_0-9]+(?:.[_0-9]+)?(?:[eEpP][+-]?[_0-9]+)?)|(?:'(?:[0-9a-zA-Z_+\-*/@$#=]|\\c[0-9a-zA-Z]{1,4}|\\n|\\t)'[a-z]?)/g;
 
     function replacer(match: str, offset: num, string: str): str {
       const token: token = {
@@ -584,11 +599,21 @@ class CCUS {
       }
 
       // TODO special types of strings
-      // j == json literal, r == regex literal, h == html literal, f == formatted, l == latex, m == markdown
+      /* f == formatted
+       * r == regex literal
+       * j == json literal
+       * d == date string
+       * l == latex
+       * m == markdown
+       * h == html literal
+       * c == css
+       * e == eval ccus code
+       */
+
       for (const e of strs)
         if (e.content.length + e.index < c.length)
           if (
-            ['j', 'r', 'h', 'f', 'l', 'm'].includes(
+            ['f', 'r', 'j', 'd', 'l', 'm', 'h', 'c', 'e'].includes(
               c[e.content.length + e.index]
             )
           )
@@ -844,10 +869,7 @@ class CCUS {
 
   private static optimiseTree(logicTree: t): t {}
 
-  private static getPosition(
-    rawIndex: num,
-    str: str
-  ): { line: num; column: num } {
+  private static getPosition(rawIndex: num, str: str): position {
     return {
       line:
         str

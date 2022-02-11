@@ -1,11 +1,12 @@
-use "test"
-/*def once*/
-def y "str"
+def once
+use "my header"
+def y x
 
 // f(x) = y
-func f(num x /* important comment */ ) {
-  char8 c = 'a'; // TODO add char literal
-  char8 c2 = '\n51';
-  str s = "my string"j;
+func f(num x) {
   ret y + 3;
 }
+
+char8 c = 'a'; // TODO add char literal
+char8 c2 = '\n51';
+str s = "my string"j;

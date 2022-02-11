@@ -1,12 +1,14 @@
 // LEXER
 // creates a list of tokens
-let source = '(1 + 2) * 3 + 4 * 5 * (6 * 7)';
-let lexerIndex = 0;
+const source = '(1 + 2) * 3 + 4 * 5 * (6 * 7)';
 
 function lex() {
+  let lexerIndex = 0;
   const tokens = [];
+
   while (lexerIndex < source.length) {
     const ch = source[lexerIndex];
+
     switch (ch) {
       case ' ':
       case '\n':
@@ -22,34 +24,33 @@ function lex() {
         tokens.push({ type: 'operator', value: ch });
         break;
       default:
-        if (ch >= '0' && ch <= '9') {
-          tokens.push(lexNumber());
-        } else {
-          throw new Error('unknown token: ' + ch);
-        }
+        if (ch >= '0' && ch <= '9') tokens.push(lexNumber());
+        else throw new Error('unknown token: ' + ch);
         break;
     }
   }
-  return tokens;
-}
 
-// reads a number
-function lexNumber() {
-  let num = '';
-  while (lexerIndex < source.length) {
-    const c = source[lexerIndex];
-    if (c >= '0' && c <= '9') {
-      num += c;
-    } else {
-      break;
+  return tokens;
+
+  // reads a number
+  function lexNumber() {
+    let num = '';
+
+    while (lexerIndex < source.length) {
+      const c = source[lexerIndex];
+
+      if (c >= '0' && c <= '9') num += c;
+      else break;
+
+      lexerIndex++;
     }
-    lexerIndex++;
+
+    return { type: 'literal', value: parseInt(num) };
   }
-  return { type: 'literal', value: parseInt(num) };
 }
 
 // PARSER
-let tokens = lex();
+const tokens = lex();
 
 let index = 0;
 
@@ -120,5 +121,4 @@ function literal() {
   }
 }
 
-const ast = parse();
-console.log(ast);
+console.log(parse());
