@@ -1,12 +1,14 @@
 def once
 use "my header"
-def y x
+def y x+2
 
 // f(x) = y
-func f(num x) {
+//func f(num x) {
+  y;
   ret y + 3;
-}
+//}
 
-char8 c = 'a'; // TODO add char literal
-char8 c2 = '\n51';
-str s = "my string"j;
+//char8 c = 'a'; // TODO add char literal
+//char8 c2 = '\c51';
+//str s = "my string"r;
+//let x = 10;

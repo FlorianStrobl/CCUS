@@ -35,6 +35,8 @@ interface token {
 
 interface detailedToken extends token {
   detailedType: detailedTokenType;
+  // TODO
+  wasInsideADef?: bool; // do not use the raw index as it is the one from the def
 }
 
 interface position {
@@ -190,7 +192,7 @@ const symbols: str[] = [
   ':', // for each/ key value pair seperator TODO
   '?', // optional argument in function/ tenray operator
   '+', // add, also strings
-  '-', // subtrackt
+  '-', // subtract
   '*', // multiply
   '/', // divide
   '**', // exponent
@@ -753,12 +755,13 @@ class CCUS {
     return detailedTokens;
   }
 
-  private static preprocess(tokens: (detailedToken | null)[]): {
+  private static preprocess(tokens: detailedToken[]): {
     detailedTokens: detailedToken[];
     uses: str[];
   } {
-    let useHeaders: str[] = [];
-    let defs: { literal: str; value: str }[] = [];
+    let useHeaders: { headerName: str; rawIndex: num }[] = [];
+    let defs: { identifier: str; valueTokens: token[]; rawIndexs: num[] }[] =
+      [];
     // `use str (ONLY STR LITERAL, none id or var)` and `def id any \n` keywords
     // get all the use and def preprocessor statements
     // check if some use statements are double
@@ -766,19 +769,21 @@ class CCUS {
     // resolve use statements
     // resolve def statements
     // `def once` / `use once` for #pragma once?
+    // ifdef, elsedef, enddef, undef, anddef, ordef, notdef
 
     // "use" keyword
     for (let i = 0; i < tokens.length; ++i) {
-      const token: detailedToken | null = tokens[i];
+      const token: detailedToken = tokens[i];
 
-      if (token !== null && token.content === 'use') {
+      if (token.content === 'use') {
         if (
           tokens.length > i + 1 &&
-          tokens[i + 1]?.detailedType === detailedTokenType.strLiteral
+          tokens[i + 1].detailedType === detailedTokenType.strLiteral
         ) {
-          if (tokens[i + 1] !== null) useHeaders.push(tokens[i + 1]!.content);
-          tokens[i] = null; // remove the keyword and the string literal
-          tokens[i + 1] = null;
+          useHeaders.push({
+            headerName: tokens[i + 1].content,
+            rawIndex: tokens[i + 1].index
+          });
           ++i; // do not check the next token (because it is the string literal)
         } else {
           // error used keyword `use` wrong because i+1 is not string literal
@@ -791,78 +796,117 @@ class CCUS {
 
     // "def" keyword
     for (let i = 0; i < tokens.length; ++i) {
-      const token: detailedToken | null = tokens[i];
-
-      if (token === null) continue;
+      const token: detailedToken = tokens[i];
 
       if (token.content === 'def') {
         // go through all indexes after this until the token is on the next line
         // TODO check only the line after the identifier and not if it is on the same line as the def keyword
-        const curLine: num = token.line;
 
         if (
-          tokens[i + 1] !== null &&
           tokens.length > i + 1 &&
-          tokens[i + 1]!.detailedType === detailedTokenType.identifier
+          tokens[i + 1].detailedType === detailedTokenType.identifier
         ) {
           // TODO empty value or set to 1 for boolean?
-          defs.push({ literal: tokens[i + 1]!.content, value: '1' });
-          tokens[i] = null; // dont need the keyword token anymore
+          defs.push({
+            identifier: tokens[i + 1].content,
+            valueTokens: [],
+            rawIndexs: [tokens[i + 1].index]
+          });
         } else {
           console.error(
             '[Preprocessor]: Invalid use of the "def" keyword (keyword was not followed by an identifier).'
           );
         }
 
-        // TODO multi token definition
-        if (
-          tokens[i + 1] !== null &&
-          tokens[i + 2] !== null &&
-          tokens.length > i + 2 &&
-          tokens[i + 1]!.line === tokens[i + 2]!.line
+        // get all the tokens until the end of line
+        i++; // go directly to the use identifier token
+        while (
+          tokens.length > i + 1 && // i+1 has to be valid
+          tokens[i].line === tokens[i + 1].line
         ) {
-          defs[defs.length - 1].value = tokens[i + 2]!.content;
-          tokens[i + 1] = null; // dont need the identifier anymore
-          tokens[i + 2] = null; // dont need the value anymore
-        } else {
-          console.warn(
-            '[Preprocessor]: Invalid use of the "def" keyword (keyword and identifier was not followed by a value on the same line).'
-          );
+          // TODO tokens not just a string, but have to remain actuall tokens
+          defs[defs.length - 1].valueTokens.push(tokens[i + 1]);
+          defs[defs.length - 1].rawIndexs.push(tokens[i + 1].index);
+          i++;
         }
       }
     }
 
-    // remove finished tokens part 2
-    tokens = tokens.filter((e) => e !== null);
-
-    tokens.map((t) => {
-      // skip any none identifier types
-      if (t?.detailedType !== detailedTokenType.identifier) return t;
-
-      let possibleDefs: {
-        literal: str;
-        value: str;
-      }[] = defs.filter((d) => d.literal === t.content);
-
-      // skip if it is a keyword not specified as a def
-      if (possibleDefs.length === 0) return t;
-
-      if (defs.length !== 1) {
-        // TODO error
+    let defIdentifierCount: str[] = [];
+    defs.forEach((d) => {
+      if (defIdentifierCount.includes(d.identifier))
         console.error(
-          '[Preprocessor]: Invalid use of identifires for the "def" keyword (TODO INFO)'
+          `[Preprocessor]: multiple defs use the same identifier: ${d.identifier}`
         );
-      } else if (t !== null) t.content = possibleDefs[0].value;
-
-      return t;
+      else defIdentifierCount.push(d.identifier);
     });
+
+    let headerCount: str[] = [];
+    useHeaders = useHeaders.filter((h) => {
+      if (headerCount.includes(h.headerName)) {
+        console.warn(
+          `[Preprocessor]: using multiple times the same header file: "${h.headerName}"`
+        );
+        return false;
+      }
+      headerCount.push(h.headerName);
+      return true;
+    });
+
+    // remove finished tokens part, remove use and defs
+    tokens = tokens.filter(
+      (e) =>
+        !defs.some((_e) => _e.rawIndexs.includes(e.index)) &&
+        !useHeaders.some((_e) => _e.rawIndex === e.index) &&
+        e.content !== 'def' &&
+        e.content !== 'use'
+    );
+
+    for (const def of defs) {
+      let bool: bool = true;
+
+      while (bool) {
+        let skip: bool = false;
+
+        // do it until all the occurances of the def identifier is finished
+        for (let i = 0; i < tokens.length; ++i) {
+          const token: token = tokens[i];
+
+          if (
+            token.content === def.identifier &&
+            token.type === tokenType.identifier
+          ) {
+            // found token
+
+            tokens.splice(i, 1); // remove occurance of the token
+
+            // put the tokens at the place
+            for (let y = def.valueTokens.length - 1; y >= 0; --y)
+              tokens.splice(i, 0, {
+                ...def.valueTokens[y],
+                detailedType: detailedTokenType.none, // TODO
+                wasInsideADef: true
+              });
+
+            // redo the entire for loop because there could be more same identifiers
+            skip = true;
+            break;
+          }
+        }
+
+        // finish the loop because it did go through the entire code
+        // without seeing the token
+        if (skip === false) bool = false;
+      }
+    }
 
     // TODO probably just make a list of to get header files (use)
     // and resovle them at a later stage to fix recursiv problems
 
-    // TODO
-    // @ts-ignore
-    return { detailedTokens: tokens === null ? [] : tokens, uses: useHeaders };
+    return {
+      detailedTokens: tokens,
+      uses: useHeaders.map((h) => h.headerName)
+    };
   }
 
   private static logicAnalyser(tokens: detailedToken[]): t {}
