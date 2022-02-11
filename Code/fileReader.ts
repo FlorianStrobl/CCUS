@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import * as fs from 'fs';
 
 export function getCode(
