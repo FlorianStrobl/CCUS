@@ -1,9 +1,9 @@
 class AST {
-  private leftNode: AST;
-  private rightNode: AST;
+  private leftNode: AST | null;
+  private rightNode: AST | null;
   public data: { content: string; type: number };
 
-  constructor(leftNode: AST = null, rightNode: AST = null) {
+  constructor(leftNode: AST | null = null, rightNode: AST | null = null) {
     this.leftNode = leftNode;
     this.rightNode = rightNode;
   }
@@ -36,9 +36,11 @@ class AST {
     for (const w of way)
       if (w === true)
         // go one node to the left
-        return this.leftNode.goWay(way.slice(1));
+        return this.leftNode!.goWay(way.slice(1));
       // go one node to the right
-      else return this.rightNode.goWay(way.slice(1));
+      else return this.rightNode!.goWay(way.slice(1));
+
+    return null;
   }
 
   public static traverseAllChilds(
@@ -52,9 +54,9 @@ class AST {
     currentValues.push(node.data.content);
 
     // add every left node
-    currentValues = AST.traverseAllChilds(node.getLeft(), currentValues);
+    currentValues = AST.traverseAllChilds(node.getLeft()!, currentValues);
     // add every right node
-    currentValues = AST.traverseAllChilds(node.getRight(), currentValues);
+    currentValues = AST.traverseAllChilds(node.getRight()!, currentValues);
 
     return currentValues;
   }
