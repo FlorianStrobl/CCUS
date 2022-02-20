@@ -601,13 +601,13 @@ class CCUS {
       }
 
       // TODO special types of strings
-      /* f == formatted
+      /* f == file path
        * r == regex literal
        * j == json literal
        * d == date string
        * l == latex
        * m == markdown
-       * h == html literal
+       * h == html
        * c == css
        * e == eval ccus code
        */
