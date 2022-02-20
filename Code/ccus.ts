@@ -5,7 +5,7 @@
 
 import { getCode } from './fileReader';
 
-// TODO char literals, array literals
+// TODO char literals, ~array literals~, punctuation
 
 /* parser:
  * literal;
@@ -304,6 +304,13 @@ class CCUS {
     };
   }
 
+  /**
+   * find comments (//, /* /) and strings (""c)
+   * find identifiers
+   *  filter keywords from identifiers
+   * find char and numeric literals
+   * find symbols
+   */
   public static getTokens(sourceCode: str): token[] {
     // comments (char by char)
     // literals (char by char/regexp)
