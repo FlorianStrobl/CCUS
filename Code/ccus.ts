@@ -344,7 +344,7 @@ class CCUS {
     const identifierRegex: RegExp = /[_a-zA-Z][a-zA-Z0-9]*/g;
     // TODO .5, 0x
     const literalsRegex: RegExp =
-      /(?:(?:0[bBdDoO])?[_0-9]+(?:.[_0-9]+)?(?:[eEpP][+-]?[_0-9]+)?)|(?:'(?:[0-9a-zA-Z_+\-*/@$#=]|\\c[0-9a-zA-Z]{1,4}|\\n|\\t)'[a-z]?)/g;
+      /(?:(?:0[bBdDoO])?[_0-9]+(?:.[_0-9]+)?(?:[eEpP][+-]?[_0-9]+)?)|(?:'(?:[0-9a-zA-Z_+\-*/@$#=]|\\c[0-9a-fA-F]{1,4}|\\n|\\t)'[a-zA-Z]?)/g;
 
     function replacer(match: str, offset: num, string: str): str {
       const token: token = {
@@ -616,7 +616,7 @@ class CCUS {
         if (e.content.length + e.index < c.length)
           if (
             ['f', 'r', 'j', 'd', 'l', 'm', 'h', 'c', 'e'].includes(
-              c[e.content.length + e.index]
+              c[e.content.length + e.index].toLowerCase()
             )
           )
             e.content += c[e.content.length + e.index];
