@@ -1,0 +1,5 @@
+// "func" identifier () { }
+func f() {}
+
+// "func" identifier (arguments) { statements; return value; }
+func g(int x = 5) { x = x + 1; return 2 * x; }

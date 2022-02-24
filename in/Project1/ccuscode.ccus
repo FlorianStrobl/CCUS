@@ -1,11 +1,9 @@
-//def once
+def once
 use "my header"
-def y x+2
 
-// f(x) = y
+// f(x) = 2*x
 func f(num x) {
-  y;
-  ret y + 3;
+  ret 2 * x;
 }
 
 //char8 c = 'a'; // TODO add char literal

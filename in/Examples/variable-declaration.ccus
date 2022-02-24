@@ -1,0 +1,28 @@
+// type identifier;
+int a;
+
+// type identifier = literal;
+int b = 5;
+
+// type identifier = value;
+int c = b;
+int d = function();
+int e = object.value;
+
+// let identifier;
+let x;
+
+// let identifier = literal;
+let y = "Hello world";
+
+// let identifier = value;
+let z = y;
+
+// identifier = literal;
+a = 5;
+b = 6;
+c = 7;
+y = 8;
+
+// identifier = value;
+z = function();

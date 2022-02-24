@@ -1,0 +1,79 @@
+// symbols:
+// // <= comment
+// : <= consists of
+// - <= possible value
+// () <= group
+// ? <= optional (zero or one)
+// * <= zero or more
+// + <= one or more
+// | <= or
+// {} <= modifier
+
+int
+
+float
+
+char
+
+str
+
+numeric:
+  - bool
+
+  - int
+
+  - float
+
+  - char
+
+literal:
+  - numLiteral
+
+  - str
+
+  -  "{" (literal)?|((literal,)*(literal(,)?)) "}" // object
+
+  - "[" (literal)?|(literal,)? "]" // array
+
+  - "(" (literal)?|(literal,)? ")" // tuple
+
+expression:
+  - boolExpression
+
+  - mathExpression
+
+boolValue:
+  - numeric
+
+  - identifier{variable,type=numeric}
+
+boolExpression:
+  - numeric
+
+  - boolExpression "||" boolExpression
+
+  - boolExpression "&&" boolExpression
+
+  - boolValue "<" boolValue
+
+  - boolValue ">" boolValue
+
+  - boolValue ">=" boolValue
+
+  - boolValue "<=" boolValue
+
+  - boolValue "==" boolValue
+
+statement:
+  "let" id ("=" literal)? ";"
+
+  type id ("=" literal{type})? ";"
+
+  "func" (funcModifier)* id "(" (type id ("=" literal{type})?)* ")" "{" (statement)* "}"
+
+  "class" id "{" statement "}"
+
+  statement
+
+funcModifier:
+  "static"

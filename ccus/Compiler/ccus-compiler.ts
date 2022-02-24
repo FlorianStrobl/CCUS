@@ -3,6 +3,8 @@
 // html, css, latex and regex equivalent string options
 // systemverilog
 
+// def does not substitute in
+
 import { getCode } from './fileReader';
 
 // TODO char literals, ~array literals~, punctuation
