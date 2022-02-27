@@ -3,6 +3,8 @@
 // html, css, latex and regex equivalent string options
 // systemverilog
 
+// punctuation is not in the ast
+
 // def does not substitute in
 
 import { getCode } from './fileReader';
@@ -619,12 +621,13 @@ class CCUS {
        * h == html
        * c == css
        * e == eval ccus code
+       * u == url string
        */
 
       for (const e of strs)
         if (e.content.length + e.index < c.length)
           if (
-            ['f', 'r', 'j', 'd', 'l', 'm', 'h', 'c', 'e'].includes(
+            ['f', 'r', 'j', 'd', 'l', 'm', 'h', 'c', 'e', 'u'].includes(
               c[e.content.length + e.index].toLowerCase()
             )
           )
