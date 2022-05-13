@@ -6,6 +6,8 @@
 // punctuation is not in the ast
 
 // def does not substitute in
+// url = gwN (gateway + version number).name1.name2.name3.extension
+// ...extension/folder1/folder2/folder3?params=[]@paragraph
 
 import { getCode } from './fileReader';
 
@@ -611,17 +613,19 @@ class CCUS {
         });
       }
 
-      // TODO special types of strings
-      /* f == file path
-       * r == regex literal
-       * j == json literal
-       * d == date string
-       * l == latex
-       * m == markdown
-       * h == html
-       * c == css
-       * e == eval ccus code
-       * u == url string
+      // TODO special types of string literals
+      /* f == file path, C::folder1/folder2/folder3/file.type
+       * r == regex literal, /test/g
+       * j == json literal, { "key": "val" }
+       * d == date string, 10:04:2022
+       * TODO cron string?, 0 0 * * *
+       * l == latex, sqrt(5)
+       * m == markdown, # titel
+       * h == html, <header>Test</header>
+       * c == css, .main { color: #ff00ff }
+       * e == eval ccus code, num main() { return 0; }
+       * u == url string, internet out::path1/path2/path3/site?args
+       * TODO ip/api/address (in url?)
        */
 
       for (const e of strs)
