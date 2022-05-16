@@ -1079,6 +1079,8 @@ const sourceCode2: str = `//
   // all of them are not comments 4
   //`;
 
+console.log(CCUS.getTokens('func f(x) { out(x); ret x; }'));
+
 //console.log(CCUS.CCUStoASM(sourceCode2).preprocessedSourceCode);
 console.time();
 CCUS.CCUStoASM(getCode());
