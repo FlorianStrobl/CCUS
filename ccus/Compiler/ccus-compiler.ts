@@ -259,18 +259,16 @@ const symbols: str[] = [
 ];
 // #endregion
 
-class CCUS {
-  constructor() {}
+namespace CCUS {
+  /**
+   *
+   */
+  export function ASMinterpreter(asmInstructions: str[]): void {}
 
   /**
    *
    */
-  public static ASMinterpreter(asmInstructions: str[]): void {}
-
-  /**
-   *
-   */
-  public static CCUStoASM(
+  export function CCUStoASM(
     sourceCode: str,
     sources?: str[] // other files for use statement/keyword
   ): {
@@ -317,7 +315,7 @@ class CCUS {
    * find char and numeric literals
    * find symbols
    */
-  public static getTokens(sourceCode: str): token[] {
+  export function getTokens(sourceCode: str): token[] {
     // comments (char by char)
     // literals (char by char/regexp)
 
@@ -720,7 +718,7 @@ class CCUS {
     ].sort((a, b) => (a.index <= b.index ? -1 : 1));
   }
 
-  private static updateTokens(tokens: token[]): detailedToken[] {
+  function updateTokens(tokens: token[]): detailedToken[] {
     // remove whitespaces and comments
     tokens = tokens.filter(
       (t) => t.type !== tokenType.whitespaces && t.type !== tokenType.comment
@@ -771,7 +769,7 @@ class CCUS {
     return detailedTokens;
   }
 
-  private static preprocess(tokens: detailedToken[]): {
+  function preprocess(tokens: detailedToken[]): {
     detailedTokens: detailedToken[];
     uses: str[];
   } {
@@ -925,11 +923,11 @@ class CCUS {
     };
   }
 
-  private static logicAnalyser(tokens: detailedToken[]): t {}
+  function logicAnalyser(tokens: detailedToken[]): t {}
 
-  private static optimiseTree(logicTree: t): t {}
+  function optimiseTree(logicTree: t): t {}
 
-  private static getPosition(rawIndex: num, str: str): position {
+  export function getPosition(rawIndex: num, str: str): position {
     return {
       line:
         str
