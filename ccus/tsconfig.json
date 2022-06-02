@@ -3,6 +3,5 @@
     "target": "ESNEXT",
     "lib": ["ESNEXT", "DOM", "ESNEXT.String"],
     "moduleResolution": "node"
-  },
-  "include": ["C:/Users/Flori/node_modules/@types/node/*.*"]
+  }
 }
