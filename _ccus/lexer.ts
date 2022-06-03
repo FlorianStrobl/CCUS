@@ -229,13 +229,7 @@ export namespace lexer {
             };
           });
 
-          // edit current line to color in all the errors
-          function colorBadSymbols(
-            line: str,
-            val: [column: int, len: int][]
-          ): str {
-            return '';
-          }
+          // TODO edit current line to color in all the errors
 
           // #region generate msg
           let errorMsg: str = '';
@@ -246,7 +240,7 @@ export namespace lexer {
 
           const msg: str = `invalid character${
             (errorMsg.match(/\^/g) ?? []).length > 1 ? 's' : ''
-          } at line ${i}: `;
+          } at line ${i + 1}: `;
           const constOffset: int = '[lexer-error]: '.length;
 
           // include the offset of the msg itself
@@ -257,7 +251,7 @@ export namespace lexer {
             msg +
               `${
                 getLine(lineIndexes[i]) /* current line */
-              }\n${errorMsg.replace(/\^/g, addColor('^'))}`
+              }\n${errorMsg.replace(/\^/g, addColor('^', 31))}`
           );
         }
       }
@@ -265,7 +259,19 @@ export namespace lexer {
   }
 
   function addColor(msg: str, color: int = 32) {
-    return '\u001b[' + 31 + 'm' + msg + '\u001b[0m';
+    /**
+     * txt:
+     *  red: 31
+     *  green: 32
+     *  blue: 34
+     *  purple: 35
+     * bg:
+     *  red: 41
+     *  green: 42
+     *  blue: 44
+     *  purple: 45
+     */
+    return '\u001b[' + color + 'm' + msg + '\u001b[0m';
   }
 
   // #region helper functions
