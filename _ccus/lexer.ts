@@ -204,21 +204,40 @@ export namespace lexer {
     if (invalidLexems.length !== 0) {
       console.error(`[lexer] lexer found invalid tokens:`);
 
-      
-      for (let i = 0; i < invalidLexems.length; ++i) {
-        const lexem: [substr: string, index: number] = invalidLexems[i];
-        const lineContent: str = getLine(lexem[1]);
-        const column: int = getColumnPos(lexem[1]);
-        const line: int = getLinePos(lexem[1]);
-        let showing: str = ' '.repeat(column - 1) + '^'.repeat(lexem[0].length);
+      // an index which is INSIDE the line
+      const lineIndexes: int[] =
+        // #region
+        [...code.matchAll(/\n/g)].map((a) => a.index ?? -1);
 
-        const msg1: str = `invalid token${
-          lexem[0].length === 1 ? '' : 's'
-        } at line ${line}: "`;
-        console.log(
-          `${msg1}${lineContent}"\n${' '.repeat(msg1.length) + showing}`
-        );
+      // check if the last line is already included!
+      const lastLine: str = code.slice(
+        lineIndexes[lineIndexes.length - 1] + 1,
+        code.length
+      );
+      // ignore trailing empty lines
+      if (lastLine.length !== 0 && lastLine.lastIndexOf('\n') === -1)
+        lineIndexes.push(code.length - 1); // add last line, because it isnt in it already
+      // #endregion
+
+      for (let i = 0; i < lineIndexes.length; ++i) {
+        const currentLine: str = getLine(lineIndexes[i]);
+        console.log(`line: ${i}: "${currentLine}"`);
       }
+
+      // for (let i = 0; i < invalidLexems.length; ++i) {
+      //   const lexem: [substr: string, index: number] = invalidLexems[i];
+      //   const lineContent: str = getLine(lexem[1]);
+      //   const column: int = getColumnPos(lexem[1]);
+      //   const line: int = getLinePos(lexem[1]);
+      //   let showing: str = ' '.repeat(column - 1) + '^'.repeat(lexem[0].length);
+
+      //   const msg1: str = `invalid token${
+      //     lexem[0].length === 1 ? '' : 's'
+      //   } at line ${line}: "`;
+      //   console.log(
+      //     `${msg1}${lineContent}"\n${' '.repeat(msg1.length) + showing}`
+      //   );
+      // }
     }
   }
 
@@ -420,10 +439,9 @@ export namespace lexer {
 }
 
 console.log(
-  lexer.lexer(`
-
-a "regexp"r f
-  $* 2 ~
-
-  "hello \\" world" ~`)
+  // TODO lex empty string, lex string with space, lex string with single invalid character
+  // TODO last char == "\n" vs not (and then last char invalid or not)
+  lexer.lexer(` %
+#~ !
+ `)
 );
