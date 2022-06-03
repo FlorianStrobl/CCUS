@@ -24,24 +24,45 @@ export namespace lexer {
   }
 
   const symbols: str[] = [
-    ';',
-    '.',
-    ',',
-    '(',
-    ')',
-    '{',
-    '}',
-    '[',
-    ']',
-    '=',
-    '==',
-    '+',
-    '<='
+    '.', // seperator
+    ',', // enumerator? TODO
+    ';', // seperator, whitespace
+    '?', // for tenary
+    ':', // for tenary
+    '(', // grouping
+    ')', // grouping
+    '{', // grouping
+    '}', // grouping
+    '[', // grouping
+    ']', // grouping
+    '=', // assigment
+    '+', // math
+    '-', // math
+    '*', // math
+    '/', // math
+    '<', // bool, math
+    '>', // bool, math
+    '<=', // bool, math
+    '>=', // bool, math
+    '!', // bool
+    '==' // bool
+    //'...' // TODO, multiple args, or array/enumerator
+    /**
+     * _ for numbers and identifier/keywords
+     * \ for string escape
+     */
   ];
 
   const keywords: str[] = ['bit', 'func', 'for', 'return'];
 
+  // string modifier like "character", "regex", ...
   const stringMod: char[] = ['r', 'c'];
+
+  const defaultErrorMsg = [
+    ['`', `did you mean "${addColor('"')}" instead of "${addColor('`', 31)}"?`],
+    ["'", `did you mean "${addColor('"')}" instead of "${addColor("'", 31)}"?`],
+    ['ß', `did you mean "${addColor('ss')}" instead of "${addColor('ß', 31)}"?`]
+  ];
 
   let currentIndex: int = 0;
   let code: str = '';
@@ -57,7 +78,7 @@ export namespace lexer {
     // #region main loop
     for (let i = 0; i < source.length; ++i) {
       if (currentIndex !== i)
-        error(`internal error: currentIndex (${currentIndex}) != i (${i})`);
+        logError(`internal error: currentIndex (${currentIndex}) != i (${i})`);
 
       if (isWhitespace(curChar())) {
         // whitespace check => do nothing
@@ -163,99 +184,130 @@ export namespace lexer {
     return lexems;
   }
 
+  // #region helper functions
   function printErrors(invalidLexems: [char: char, index: int][]): void {
     if (invalidLexems.length === 0) return;
 
+    // TODO color in the current line with the errors
+    // TODO help msgs
+
     /**
      * get errors from each line, generate a ^^ message underling all of the mistakes
-     * (check for column==0 and column==end...)
      * make it dynamic such that the error msg can be adjusted fastly
      */
 
-    // #region merge following characters, TODO needed if
-    // search for characters which are directly one after another
-    let toRemoveIndexes: int[] = [];
-    invalidLexems.forEach((lexem, index) => {
-      if (
-        invalidLexems.length > index + 1 &&
-        lexem[1] + 1 === invalidLexems[index + 1][1]
-      )
-        toRemoveIndexes.push(index + 1);
-    });
+    // #region merge following characters, TODO not really needed...
+    // // search for characters which are directly one after another
+    // let toRemoveIndexes: int[] = [];
+    // invalidLexems.forEach((lexem, index) => {
+    //   if (
+    //     invalidLexems.length > index + 1 &&
+    //     lexem[1] + 1 === invalidLexems[index + 1][1]
+    //   )
+    //     toRemoveIndexes.push(index + 1);
+    // });
 
-    // multiple toRemoveIndexes one after another lmao
-    for (let i = invalidLexems.length - 1; i >= 0; --i)
-      if (toRemoveIndexes.includes(i))
-        invalidLexems[toRemoveIndexes[toRemoveIndexes.indexOf(i)] - 1][0] +=
-          invalidLexems[toRemoveIndexes[toRemoveIndexes.indexOf(i)]][0];
+    // // multiple toRemoveIndexes one after another lmao
+    // for (let i = invalidLexems.length - 1; i >= 0; --i)
+    //   if (toRemoveIndexes.includes(i))
+    //     invalidLexems[toRemoveIndexes[toRemoveIndexes.indexOf(i)] - 1][0] +=
+    //       invalidLexems[toRemoveIndexes[toRemoveIndexes.indexOf(i)]][0];
 
-    invalidLexems = invalidLexems.filter(
-      (_, index) => !toRemoveIndexes.includes(index)
-    );
+    // invalidLexems = invalidLexems.filter(
+    //   (_, index) => !toRemoveIndexes.includes(index)
+    // );
     // #endregion
 
-    if (invalidLexems.length !== 0) {
-      // invalid characters are in the source code!
+    if (invalidLexems.length === 0) return;
 
-      // an index which is INSIDE the line
-      const lineIndexes: int[] =
-        // #region
-        [...code.matchAll(/\n/g)].map((a) => a.index ?? -1);
+    // invalid characters are in the source code!
 
-      // check if the last line is already included!
-      const lastLine: str = code.slice(
-        lineIndexes[lineIndexes.length - 1] + 1,
-        code.length
+    // an index which is INSIDE the line
+    const lineIndexes: int[] =
+      // #region
+      [...code.matchAll(/\n/g)].map((a) => a.index ?? -1);
+
+    // check if the last line is already included!
+    const lastLine: str = code.slice(
+      lineIndexes[lineIndexes.length - 1] + 1,
+      code.length
+    );
+    // ignore trailing empty lines
+    if (lastLine.length !== 0 && lastLine.lastIndexOf('\n') === -1)
+      lineIndexes.push(code.length - 1); // add last line, because it isnt in it already
+    // #endregion
+
+    for (let i = 0; i < lineIndexes.length; ++i) {
+      const errorsOnThisLine = invalidLexems.filter(
+        (lexem) => getLinePos(lexem[1]) === i + 1
       );
-      // ignore trailing empty lines
-      if (lastLine.length !== 0 && lastLine.lastIndexOf('\n') === -1)
-        lineIndexes.push(code.length - 1); // add last line, because it isnt in it already
-      // #endregion
 
-      for (let i = 0; i < lineIndexes.length; ++i) {
-        const errorsOnThisLine = invalidLexems.filter(
-          (lexem) => getLinePos(lexem[1]) === i + 1
-        );
+      if (errorsOnThisLine.length === 0) continue; // skip to next line
 
-        if (errorsOnThisLine.length !== 0) {
-          // log an error message for this line
-          const errors: {
-            str: str;
-            column: int;
-          }[] = errorsOnThisLine.map(([substr, index]) => {
-            return {
-              str: substr,
-              column: getColumnPos(index) - 1
-            };
-          });
+      // log an error message for this line
+      const errors: {
+        str: str;
+        column: int;
+      }[] = errorsOnThisLine.map(([substr, index]) => {
+        return {
+          str: substr,
+          column: getColumnPos(index) - 1
+        };
+      });
 
-          // TODO edit current line to color in all the errors
+      // TODO edit current line to color in all the errors
 
-          // #region generate msg
-          let errorMsg: str = '';
-          for (const error of errors)
-            errorMsg +=
-              ' '.repeat(error.column - errorMsg.length) +
-              '^'.repeat(error.str.length);
+      const ans = generateErrorMsg(errors, i);
 
-          const msg: str = `invalid character${
-            (errorMsg.match(/\^/g) ?? []).length > 1 ? 's' : ''
-          } at line ${i + 1}: `;
-          const constOffset: int = '[lexer-error]: '.length;
+      logError(
+        ans.msg +
+          `${
+            getLine(lineIndexes[i]) /* current line */
+          }\n${ans.errorMsg.replace(/\^/g, addColor('^', 31))}${ans.helpMsg}`
+      );
+    }
+  }
 
-          // include the offset of the msg itself
-          errorMsg = ' '.repeat(msg.length + constOffset) + errorMsg;
-          // #endregion
+  // TODO! color, multiple lines, ...
+  function generateErrorMsg(
+    errors: {
+      str: str;
+      column: int;
+    }[],
+    i: int
+  ): { errorMsg: str; helpMsg: str; msg: str } {
+    let errorMsg: str = '';
+    for (const error of errors)
+      errorMsg +=
+        ' '.repeat(error.column - errorMsg.length) +
+        '^'.repeat(error.str.length);
 
-          error(
-            msg +
-              `${
-                getLine(lineIndexes[i]) /* current line */
-              }\n${errorMsg.replace(/\^/g, addColor('^', 31))}`
-          );
-        }
+    const msg: str = `invalid character${
+      (errorMsg.match(/\^/g) ?? []).length > 1 ? 's' : ''
+    } at line ${i + 1}: `;
+    const constOffset: int = '[lexer-error]: '.length;
+
+    // include the offset of the msg itself
+    errorMsg = ' '.repeat(msg.length + constOffset) + errorMsg;
+
+    // give help if possible
+    let helpMsg: str = '';
+    for (const error of errors) {
+      const index: int = defaultErrorMsg.map((e) => e[0]).indexOf(error.str);
+      if (index !== -1) {
+        helpMsg += '\n' + defaultErrorMsg[index][1];
       }
     }
+    return { errorMsg, helpMsg, msg };
+  }
+
+  // #region console
+  function log(...data: any[]): void {
+    console.log(`[lexer]:`, ...data);
+  }
+
+  function logError(errorMsg: str, ...data: any[]): void {
+    console.error(`[lexer-error]: ${errorMsg}`, ...data);
   }
 
   function addColor(msg: str, color: int = 32) {
@@ -272,16 +324,6 @@ export namespace lexer {
      *  purple: 45
      */
     return '\u001b[' + color + 'm' + msg + '\u001b[0m';
-  }
-
-  // #region helper functions
-  // #region console
-  function log(...data: any[]): void {
-    console.log(`[lexer]:`, ...data);
-  }
-
-  function error(errorMsg: str, ...data: any[]): void {
-    console.error(`[lexer-error]: ${errorMsg}`, ...data);
   }
   // #endregion
 
@@ -366,11 +408,14 @@ export namespace lexer {
       if (isDigit(nextChars())) {
         number += nextChars();
         advance();
-      } else if (!!nextChars().match(/\./) && !gotDot && !gotE) {
+      } else if (nextChars() === '_') {
+        number += nextChars();
+        advance();
+      } else if (nextChars() === '.' && !gotDot && !gotE) {
         gotDot = true;
         number += nextChars();
         advance();
-      } else if (!!nextChars().match(/e/i) && !gotE) {
+      } else if (nextChars().toLowerCase() === 'e' && !gotE) {
         gotE = true;
         lastCharWasE = true;
         number += nextChars();
@@ -385,7 +430,7 @@ export namespace lexer {
     let str: str = '';
 
     while (true) {
-      // handle "\n", "\t", \uxxxx and escapes (\)
+      // handle "\n", "\t", \uxxxx and escaped \  "\\"
       if (curChar() !== '\\' && nextChars() === '"') {
         // stop string next char
         str += curChar();
@@ -413,6 +458,7 @@ export namespace lexer {
       str: str // then modify it
         .replace(/\\n/g, '\n')
         .replace(/\\t/g, '\t')
+        .replace(/\\\\/g, '\\')
         .replace(/\\u(\d{4})/, (_, digits) =>
           String.fromCharCode(Number('0x' + (digits as string)))
         )
@@ -485,6 +531,7 @@ console.log(
   // TODO lex empty string, lex string with space, lex string with single invalid character
   // TODO last char == "\n" vs not (and then last char invalid or not)
   lexer.lexer(`
-let x = #$ 5 + $ 3;
+  3_2_._e_+_2_
+let _varißble = #$ \`sub\` + $ 'string';
 `)
 );
