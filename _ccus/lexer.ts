@@ -57,9 +57,7 @@ export namespace lexer {
     // #region main loop
     for (let i = 0; i < source.length; ++i) {
       if (currentIndex !== i)
-        console.error(
-          `[lexer] internal error: currentIndex (${currentIndex}) != i (${i})`
-        );
+        error(`internal error: currentIndex (${currentIndex}) != i (${i})`);
 
       if (isWhitespace(curChar())) {
         // whitespace check => do nothing
@@ -152,18 +150,13 @@ export namespace lexer {
           line: getLinePos(startingIndex),
           column: getColumnPos(startingIndex)
         });
-      } else {
-        //console.error(
-        //  `[lexer] unresolved character at line ${currentLineCount} column ${getColumn()}: "${curChar()}"`
-        //);
-        invalidLexems.push([curChar(), currentIndex]);
-      }
+      } else invalidLexems.push([curChar(), currentIndex]); // error
 
       advance(); // increase the currentIndex
     }
     // #endregion
 
-    console.log(`[lexer] finished lexing in ${Date.now() - startTime} ms`);
+    log(`finished lexing in ${Date.now() - startTime} ms`);
 
     printErrors(invalidLexems);
 
@@ -202,7 +195,7 @@ export namespace lexer {
     // #endregion
 
     if (invalidLexems.length !== 0) {
-      console.error(`[lexer] lexer found invalid tokens:`);
+      // invalid characters are in the source code!
 
       // an index which is INSIDE the line
       const lineIndexes: int[] =
@@ -220,28 +213,72 @@ export namespace lexer {
       // #endregion
 
       for (let i = 0; i < lineIndexes.length; ++i) {
-        const currentLine: str = getLine(lineIndexes[i]);
-        console.log(`line: ${i}: "${currentLine}"`);
+        const errorsOnThisLine = invalidLexems.filter(
+          (lexem) => getLinePos(lexem[1]) === i + 1
+        );
+
+        if (errorsOnThisLine.length !== 0) {
+          // log an error message for this line
+          const errors: {
+            str: str;
+            column: int;
+          }[] = errorsOnThisLine.map(([substr, index]) => {
+            return {
+              str: substr,
+              column: getColumnPos(index) - 1
+            };
+          });
+
+          // edit current line to color in all the errors
+          function colorBadSymbols(
+            line: str,
+            val: [column: int, len: int][]
+          ): str {
+            return '';
+          }
+
+          // #region generate msg
+          let errorMsg: str = '';
+          for (const error of errors)
+            errorMsg +=
+              ' '.repeat(error.column - errorMsg.length) +
+              '^'.repeat(error.str.length);
+
+          const msg: str = `invalid character${
+            (errorMsg.match(/\^/g) ?? []).length > 1 ? 's' : ''
+          } at line ${i}: `;
+          const constOffset: int = '[lexer-error]: '.length;
+
+          // include the offset of the msg itself
+          errorMsg = ' '.repeat(msg.length + constOffset) + errorMsg;
+          // #endregion
+
+          error(
+            msg +
+              `${
+                getLine(lineIndexes[i]) /* current line */
+              }\n${errorMsg.replace(/\^/g, addColor('^'))}`
+          );
+        }
       }
-
-      // for (let i = 0; i < invalidLexems.length; ++i) {
-      //   const lexem: [substr: string, index: number] = invalidLexems[i];
-      //   const lineContent: str = getLine(lexem[1]);
-      //   const column: int = getColumnPos(lexem[1]);
-      //   const line: int = getLinePos(lexem[1]);
-      //   let showing: str = ' '.repeat(column - 1) + '^'.repeat(lexem[0].length);
-
-      //   const msg1: str = `invalid token${
-      //     lexem[0].length === 1 ? '' : 's'
-      //   } at line ${line}: "`;
-      //   console.log(
-      //     `${msg1}${lineContent}"\n${' '.repeat(msg1.length) + showing}`
-      //   );
-      // }
     }
   }
 
+  function addColor(msg: str, color: int = 32) {
+    return '\u001b[' + 31 + 'm' + msg + '\u001b[0m';
+  }
+
   // #region helper functions
+  // #region console
+  function log(...data: any[]): void {
+    console.log(`[lexer]:`, ...data);
+  }
+
+  function error(errorMsg: str, ...data: any[]): void {
+    console.error(`[lexer-error]: ${errorMsg}`, ...data);
+  }
+  // #endregion
+
   // #region meta functions
   function curChar(): char {
     return code[currentIndex];
@@ -441,7 +478,7 @@ export namespace lexer {
 console.log(
   // TODO lex empty string, lex string with space, lex string with single invalid character
   // TODO last char == "\n" vs not (and then last char invalid or not)
-  lexer.lexer(` %
-#~ !
- `)
+  lexer.lexer(`
+let x = #$ 5 + $ 3;
+`)
 );
