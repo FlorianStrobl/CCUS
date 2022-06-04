@@ -262,7 +262,17 @@ export namespace lexer {
       logError(
         ans.msg +
           `${
-            getLine(lineIndexes[i]) /* current line */
+            getLine(lineIndexes[i])
+            // .split('')
+            // .map((e, index) => {
+            //   let lineOffset: int = 16; // TODO
+            //   return invalidLexems
+            //     .map((a) => a[1])
+            //     .includes(index + lineOffset)
+            //     ? addColor(e, 31)
+            //     : e;
+            // })
+            // .join('') /* current line */
           }\n${ans.errorMsg.replace(/\^/g, addColor('^', 31))}${ans.helpMsg}`
       );
     }
@@ -390,37 +400,82 @@ export namespace lexer {
   function eatNumber(): { charCount: int; number: str } {
     let number: str = curChar();
 
-    let gotDot: bool = false;
-    let gotE: bool = false;
-    let lastCharWasE: bool = false; // for optionall sign after the e
+    if (nextChars() === 'b') {
+      // binary format
+      number += 'b';
+      advance();
 
-    // look into the future
-    while (true) {
-      if (lastCharWasE) {
-        lastCharWasE = false;
-        if (!!nextChars().match(/[+-]/)) {
-          number += nextChars();
-          advance();
-          continue;
-        } // else just continue
+      let lastWasDigit: bool = false;
+      while (
+        nextChars() === '0' ||
+        nextChars() === '1' ||
+        (lastWasDigit &&
+          nextChars() === '_' &&
+          nextChars(2)[1] !== undefined &&
+          !!nextChars(2)[1].match(/0|1/g))
+      ) {
+        number += nextChars();
+        if (!!curChar().match(/0|1/g)) lastWasDigit = true;
+        advance();
       }
 
-      if (isDigit(nextChars())) {
-        number += nextChars();
-        advance();
-      } else if (nextChars() === '_') {
-        number += nextChars();
-        advance();
-      } else if (nextChars() === '.' && !gotDot && !gotE) {
-        gotDot = true;
-        number += nextChars();
-        advance();
-      } else if (nextChars().toLowerCase() === 'e' && !gotE) {
-        gotE = true;
-        lastCharWasE = true;
-        number += nextChars();
-        advance();
-      } else break;
+      if (number === '0b') {
+        // TODO error
+      }
+    } else if (nextChars() === 'x') {
+      // hex format
+    } else {
+      // decimal format
+      let gotDot: bool = false;
+      let gotE: bool = false;
+      let lastCharWasE: bool = false; // for optionall sign after the e
+      let lastCharDigit: bool = true;
+
+      // look into the future
+      while (true) {
+        // get all the underscores
+        if (
+          nextChars() === '_' &&
+          lastCharDigit &&
+          nextChars(2)[1] !== undefined &&
+          isDigit(nextChars(2)[1])
+        ) {
+          lastCharDigit = false;
+          number += nextChars();
+          advance();
+        }
+
+        if (lastCharWasE) {
+          lastCharWasE = false;
+          lastCharDigit = false;
+          if (!!nextChars().match(/[+-]/)) {
+            // +- after e
+            number += nextChars();
+            advance();
+            continue;
+          } // else just continue
+        }
+
+        if (isDigit(nextChars())) {
+          // digit
+          lastCharDigit = true;
+          number += nextChars();
+          advance();
+        } else if (nextChars() === '.' && !gotDot && !gotE) {
+          // .
+          gotDot = true;
+          lastCharDigit = false;
+          number += nextChars();
+          advance();
+        } else if (nextChars().toLowerCase() === 'e' && !gotE) {
+          // e
+          gotE = true;
+          lastCharWasE = true;
+          lastCharDigit = false;
+          number += nextChars();
+          advance();
+        } else break;
+      }
     }
 
     return { charCount: number.length - 1, number };
@@ -531,7 +586,8 @@ console.log(
   // TODO lex empty string, lex string with space, lex string with single invalid character
   // TODO last char == "\n" vs not (and then last char invalid or not)
   lexer.lexer(`
-  3_2_._e_+_2_
+  0b10_1010_1_
+  3_1_1.e-1_1
 let _varißble = #$ \`sub\` + $ 'string';
-`)
+0b`)
 );
