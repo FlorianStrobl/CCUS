@@ -3,11 +3,12 @@ import { lexer } from './lexer';
 import { compiler } from './compiler';
 import { parser } from './parser';
 
-const src: string = fr.getCode();
-console.log('src: ', src);
+const src: string = fr.getCode('E:/Data/Downloads/duktape.c');
+//console.log('src: ', src);
 
 const lexems = lexer.lexer(src);
-console.log('lexems: ', lexems);
+//console.log(lexems);
+//console.log('lexems: ', lexems);
 
 //const ast = compiler.compiler(lexems);
 //console.log('ast: ', ast);

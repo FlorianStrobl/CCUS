@@ -58,6 +58,7 @@ export namespace lexer {
   // string modifier like "character", "regex", ...
   const stringMod: char[] = ['r', 'c'];
 
+  // TODO wrong numeric literals!
   const defaultErrorMsg = [
     ['`', `did you mean "${addColor('"')}" instead of "${addColor('`', 31)}"?`],
     ["'", `did you mean "${addColor('"')}" instead of "${addColor("'", 31)}"?`],
@@ -77,6 +78,8 @@ export namespace lexer {
 
     // #region main loop
     for (let i = 0; i < source.length; ++i) {
+      if (i % 100_000 === 0) console.log('characters processed sofar: ', i);
+
       if (currentIndex !== i)
         logError(`internal error: currentIndex (${currentIndex}) != i (${i})`);
 
@@ -146,13 +149,15 @@ export namespace lexer {
 
         i += ans.charCount;
 
-        lexems.push({
-          content: ans.number,
-          type: tokenType.literal,
-          index: startingIndex,
-          line: getLinePos(startingIndex),
-          column: getColumnPos(startingIndex)
-        });
+        if (ans.valid)
+          lexems.push({
+            content: ans.number,
+            type: tokenType.literal,
+            index: startingIndex,
+            line: getLinePos(startingIndex),
+            column: getColumnPos(startingIndex)
+          });
+        else invalidLexems.push([ans.number, startingIndex]);
       } else if (isAlpha(curChar())) {
         // is identifier or keyword
 
@@ -397,88 +402,98 @@ export namespace lexer {
     return { charCount: identifier.length - 1, identifier };
   }
 
-  function eatNumber(): { charCount: int; number: str } {
+  function eatNumber(): { charCount: int; number: str; valid: bool } {
     let number: str = curChar();
 
-    if (nextChars() === 'b') {
-      // binary format
+    if (curChar() === '0' && nextChars() === 'b') {
+      // number is in the binary binary format
       number += 'b';
       advance();
 
-      let lastWasDigit: bool = false;
-      while (
-        nextChars() === '0' ||
-        nextChars() === '1' ||
-        (lastWasDigit &&
-          nextChars() === '_' &&
-          nextChars(2)[1] !== undefined &&
-          !!nextChars(2)[1].match(/0|1/g))
-      ) {
+      //while (!!nextChars().match(/[01_]/)) {
+      while (!nextChars().match(/ |\t|\n/)) {
         number += nextChars();
-        if (!!curChar().match(/0|1/g)) lastWasDigit = true;
         advance();
       }
-
-      if (number === '0b') {
-        // TODO error
-      }
-    } else if (nextChars() === 'x') {
+    } else if (curChar() === '0' && nextChars() === 'x') {
       // hex format
+      number += 'x';
+      advance();
+
+      //while (!!nextChars().match(/[0-9a-fA-F_]/)) {
+      while (!nextChars().match(/ |\t|\n/)) {
+        number += nextChars();
+        advance();
+      }
     } else {
       // decimal format
-      let gotDot: bool = false;
-      let gotE: bool = false;
-      let lastCharWasE: bool = false; // for optionall sign after the e
-      let lastCharDigit: bool = true;
 
-      // look into the future
-      while (true) {
-        // get all the underscores
-        if (
-          nextChars() === '_' &&
-          lastCharDigit &&
-          nextChars(2)[1] !== undefined &&
-          isDigit(nextChars(2)[1])
-        ) {
-          lastCharDigit = false;
-          number += nextChars();
-          advance();
-        }
-
-        if (lastCharWasE) {
-          lastCharWasE = false;
-          lastCharDigit = false;
-          if (!!nextChars().match(/[+-]/)) {
-            // +- after e
-            number += nextChars();
-            advance();
-            continue;
-          } // else just continue
-        }
-
-        if (isDigit(nextChars())) {
-          // digit
-          lastCharDigit = true;
-          number += nextChars();
-          advance();
-        } else if (nextChars() === '.' && !gotDot && !gotE) {
-          // .
-          gotDot = true;
-          lastCharDigit = false;
-          number += nextChars();
-          advance();
-        } else if (nextChars().toLowerCase() === 'e' && !gotE) {
-          // e
-          gotE = true;
-          lastCharWasE = true;
-          lastCharDigit = false;
-          number += nextChars();
-          advance();
-        } else break;
+      //while (!!nextChars().match(/[0-9_.eE+-]/)) {
+      while (!nextChars().match(/ |\t|\n/)) {
+        number += nextChars();
+        advance();
       }
+      // let gotDot: bool = false;
+      // let gotE: bool = false;
+      // let lastCharWasE: bool = false; // for optionall sign after the e
+      // let lastCharDigit: bool = true;
+
+      // // look into the future
+      // while (true) {
+      //   // get all the underscores
+      //   if (
+      //     nextChars() === '_' &&
+      //     lastCharDigit &&
+      //     nextChars(2)[1] !== undefined &&
+      //     isDigit(nextChars(2)[1])
+      //   ) {
+      //     lastCharDigit = false;
+      //     number += nextChars();
+      //     advance();
+      //   }
+
+      //   if (lastCharWasE) {
+      //     lastCharWasE = false;
+      //     lastCharDigit = false;
+      //     if (!!nextChars().match(/[+-]/)) {
+      //       // +- after e
+      //       number += nextChars();
+      //       advance();
+      //       continue;
+      //     } // else just continue
+      //   }
+
+      //   if (isDigit(nextChars())) {
+      //     // digit
+      //     lastCharDigit = true;
+      //     number += nextChars();
+      //     advance();
+      //   } else if (nextChars() === '.' && !gotDot && !gotE) {
+      //     // .
+      //     gotDot = true;
+      //     lastCharDigit = false;
+      //     number += nextChars();
+      //     advance();
+      //   } else if (nextChars().toLowerCase() === 'e' && !gotE) {
+      //     // e
+      //     gotE = true;
+      //     lastCharWasE = true;
+      //     lastCharDigit = false;
+      //     number += nextChars();
+      //     advance();
+      //   } else break;
+      // }
     }
 
-    return { charCount: number.length - 1, number };
+    return {
+      charCount: number.length - 1,
+      number,
+      valid:
+        !!number.match(/^0b([01]_?)+[01]$/) ||
+        !!number.match(/^0x([0-9a-fA-F]_?)+[0-9a-fA-F]$/) ||
+        // todo nothing between . and e, trailling .
+        !!number.match(/^\d(_?\d)*(((\.)(\d_?)*\d)|\.)?([eE][-+]?(\d_?)*\d)?$/)
+    };
   }
 
   function eatString(): { charCount: int; str: str } {
@@ -511,9 +526,19 @@ export namespace lexer {
     return {
       charCount: str.length - 1, // check first the size
       str: str // then modify it
-        .replace(/\\n/g, '\n')
-        .replace(/\\t/g, '\t')
-        .replace(/\\\\/g, '\\')
+        .replace(/\\\\|\\t|\\n/g, (match) => {
+          // function because of \\\\n, which could get parsed first into \n and then leaving the \\\ to be processed
+          switch (match) {
+            case '\\\\':
+              return '\\';
+            case '\\t':
+              return '\t';
+            case '\\n':
+              return '\n';
+            default:
+              return match;
+          }
+        })
         .replace(/\\u(\d{4})/, (_, digits) =>
           String.fromCharCode(Number('0x' + (digits as string)))
         )
@@ -585,9 +610,14 @@ export namespace lexer {
 console.log(
   // TODO lex empty string, lex string with space, lex string with single invalid character
   // TODO last char == "\n" vs not (and then last char invalid or not)
+  // 0b10_1010___1_ // invalid
+  // 3_1_1.1e-1_1 // valid
+  // 0b1_0_1_0_1 // valid
+  // 0b_1_ // invalid
+  // 0b1_ // invalid
+  //let _varißble = #$ \`sub\` + $ 'string';
+  //0b_ // invalid
   lexer.lexer(`
-  0b10_1010_1_
-  3_1_1.e-1_1
-let _varißble = #$ \`sub\` + $ 'string';
-0b`)
+"\\\\\\n";
+`)
 );
