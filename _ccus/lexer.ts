@@ -53,7 +53,15 @@ export namespace lexer {
      */
   ];
 
-  const keywords: str[] = ['bit', 'func', 'for', 'return'];
+  const keywords: str[] = [
+    'bit',
+    'let',
+    'func',
+    'return',
+    'if',
+    'for',
+    'match'
+  ];
 
   // string modifier like "character", "regex", ...
   const stringMod: char[] = ['r', 'c'];
@@ -78,8 +86,6 @@ export namespace lexer {
 
     // #region main loop
     for (let i = 0; i < source.length; ++i) {
-      if (i % 100_000 === 0) console.log('characters processed sofar: ', i);
-
       if (currentIndex !== i)
         logError(`internal error: currentIndex (${currentIndex}) != i (${i})`);
 
@@ -403,6 +409,7 @@ export namespace lexer {
   }
 
   function eatNumber(): { charCount: int; number: str; valid: bool } {
+    const numeric: RegExp = /[0-9A-Fa-f_.eE+-]/; // TODO what about 4z // this is not valid as z is directly besides 4
     let number: str = curChar();
 
     if (curChar() === '0' && nextChars() === 'b') {
@@ -410,8 +417,8 @@ export namespace lexer {
       number += 'b';
       advance();
 
-      //while (!!nextChars().match(/[01_]/)) {
-      while (!nextChars().match(/ |\t|\n/)) {
+      while (!!nextChars().match(numeric)) {
+        //while (!nextChars().match(/ |\t|\n/)) {
         number += nextChars();
         advance();
       }
@@ -420,16 +427,16 @@ export namespace lexer {
       number += 'x';
       advance();
 
-      //while (!!nextChars().match(/[0-9a-fA-F_]/)) {
-      while (!nextChars().match(/ |\t|\n/)) {
+      while (!!nextChars().match(numeric)) {
+        //while (!nextChars().match(/ |\t|\n/)) {
         number += nextChars();
         advance();
       }
     } else {
       // decimal format
 
-      //while (!!nextChars().match(/[0-9_.eE+-]/)) {
-      while (!nextChars().match(/ |\t|\n/)) {
+      while (!!nextChars().match(numeric)) {
+        //while (!nextChars().match(/ |\t|\n/)) {
         number += nextChars();
         advance();
       }
@@ -618,6 +625,6 @@ console.log(
   //let _varißble = #$ \`sub\` + $ 'string';
   //0b_ // invalid
   lexer.lexer(`
-"\\\\\\n";
+let n = 5.0z;
 `)
 );
