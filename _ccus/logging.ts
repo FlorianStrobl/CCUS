@@ -1,17 +1,32 @@
 export namespace logger {
   // line and columns always starts with index 1
 
+  interface logInfoInfos {
+    fileName: string;
+    author: string;
+  }
+
   interface codeInfoRaw {
     index: number;
     length: number;
+    markColor: number;
+    messageColor: number;
     message: string;
+    infoCode: string;
+    infoType: 'warning' | 'error';
+    infoDescription: string;
   }
 
   interface codeInfoRelativ {
     line: number;
     column: number;
     length: number;
+    markColor: number;
+    messageColor: number;
     message: string;
+    infoCode: string;
+    infoType: 'warning' | 'error';
+    infoDescription: string;
   }
 
   export function log(author: string, ...data: any[]): void {
@@ -23,8 +38,11 @@ export namespace logger {
   }
 
   export function logInfo(
+    infos: logInfoInfos,
     code: string,
-    codeInfos: codeInfoRaw[] | codeInfoRelativ[]
+    codeInfos: // | (codeInfoRaw | codeInfoRaw[])[]
+    // | (codeInfoRelativ | codeInfoRelativ[])[]| (codeInfoRaw | codeInfoRaw[])[]
+    codeInfoRelativ[] | codeInfoRaw[]
   ): void {
     for (let codeInfo of codeInfos) {
       let line: number = -1;
@@ -55,15 +73,31 @@ export namespace logger {
       if (thirdPart[thirdPart.length - 1] === '\n')
         thirdPart = thirdPart.slice(0, thirdPart.length - 1);
 
-      const msg: string = `${firstPart}${addColor(secondPart, 31)}${thirdPart}`;
-      console.log(
-        `${msg}\n${
-          ' '.repeat(column) +
-          addColor('^'.repeat(codeInfo.length), 31) +
-          ' ' +
-          addColor(codeInfo.message, 32)
-        }`
-      );
+      const msg: string = `${firstPart}${addColor(
+        secondPart,
+        codeInfo.markColor
+      )}${thirdPart}`;
+
+      const codeSpace: string = addColor(' | ', 36);
+
+      const what: string = `${addColor(
+        codeInfo.infoType + '[' + codeInfo.infoCode + ']',
+        codeInfo.infoType === 'error' ? 31 : 90
+      )}: ${addColor(codeInfo.infoDescription, 33)}`;
+      const where: string = `${addColor(' -->', 34)} ${addColor(
+        infos.fileName + '::' + line.toString(),
+        90
+      )} :`;
+      const loggedMsg: string = `${codeSpace}\n${codeSpace}${msg}\n${
+        codeSpace +
+        ' '.repeat(column) +
+        addColor('^'.repeat(codeInfo.length), codeInfo.markColor) +
+        ' ' +
+        addColor(codeInfo.message, codeInfo.messageColor)
+      }`;
+
+      //addColor(infos.author)
+      console.log(what + '\n' + where + '\n' + loggedMsg + '\n\n');
     }
 
     function getLines(): string[] {

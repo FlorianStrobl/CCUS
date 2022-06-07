@@ -16,13 +16,15 @@ export namespace lexer {
     column: int; // position in the line
   }
 
+  // TODO, special comment #TODO, #Expect-error
   export const enum tokenType {
     whitespaces = 'whitespace', // any of: ["\n", " ", "\t"]
     comment = 'comment', // "// singleline comment" or "/*multiline comment*/" (are considered whitespace)
+    symbol = 'symbol', // reserved non-alphanumeric identifiers with length 1 or 2: ["+", "-", "(", "++" ...]
+    identifier = 'id', // alphanumeric words like "myFunction", "myVariable", "true", "false"
     keyword = 'keyword', // reserved identifiers: ["func", "bit", ...]
-    symbol = 'symbol', // reserved non-alphanumeric identifiers with length 1 or 2: ["+", "-", "()", ...]
-    literal = 'literal', // any of these types: [0, 0.0, 'a', "hello world"]
-    identifier = 'id' // alphanumeric words like "myFunction", "myVariable", "true", "false"
+    numericLiteral = 'numericLiteral', // 0, 0.0, 3.e3_5
+    stringLiteral = 'stringLiteral' // "a", "hello world", "regexp"r
   }
 
   const symbols: str[] = [
@@ -42,12 +44,23 @@ export namespace lexer {
     '-', // math
     '*', // math
     '/', // math
+    '**', // math
+    '%', // math
     '<', // bool, math
     '>', // bool, math
     '<=', // bool, math
     '>=', // bool, math
+    '==', // bool
+    '!=', // bool
     '!', // bool
-    '==' // bool
+    '&&', // bool
+    '||', // bool
+    '~', // binary
+    '&', // binary
+    '|', // binary
+    '^', // binary
+    '?', // tenary
+    ':' // tenary
     //'...' // TODO, multiple args, or array/enumerator
     /**
      * _ for numbers and identifier/keywords
@@ -117,7 +130,7 @@ export namespace lexer {
 
         lexems.push({
           content: ans.str,
-          type: tokenType.literal,
+          type: tokenType.numericLiteral,
           index: startingIndex,
           line: getLinePos(startingIndex),
           column: getColumnPos(startingIndex)
@@ -156,7 +169,7 @@ export namespace lexer {
         if (ans.valid)
           lexems.push({
             content: ans.number,
-            type: tokenType.literal,
+            type: tokenType.numericLiteral,
             index: startingIndex,
             line: getLinePos(startingIndex),
             column: getColumnPos(startingIndex)
@@ -189,10 +202,41 @@ export namespace lexer {
     log.log('lexer', `finished lexing in ${Date.now() - startTime} ms`);
 
     //log.printErrors(code, invalidLexems);
+    const errorMsgs = [];
+    for (const invalidLexem of invalidLexems) {
+    }
 
-    log.logInfo(code, [
-      { index: 10, length: 4, message: 'invalid number literal' },
-      { index: 5, length: 2, message: 'invalid number literal' }
+    log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, [
+      {
+        index: 10,
+        length: 4,
+        markColor: 31,
+        messageColor: 31,
+        message: 'invalid number literal',
+        infoCode: '1483',
+        infoType: 'error',
+        infoDescription: 'invalid literal'
+      },
+      {
+        index: 5,
+        length: 2,
+        markColor: 31,
+        messageColor: 31,
+        message: 'invalid number literal',
+        infoCode: '1483',
+        infoType: 'warning',
+        infoDescription: 'invalid literal'
+      },
+      {
+        index: 24,
+        length: 4,
+        markColor: 31,
+        messageColor: 31,
+        message: 'invalid string literal',
+        infoCode: '5251',
+        infoType: 'error',
+        infoDescription: 'invalid literal'
+      }
     ]);
 
     return lexems;
@@ -226,15 +270,15 @@ export namespace lexer {
       if (singleLineComment) {
         if (curChar() === '\n') break;
         comment += curChar();
-        if (advance()) break;
+        if (advance()) break; // break because of end of file
       } else {
         if (curChar() === '*' && nextChars() === '/') {
           comment += '*/'; // do this, as it isnt done anymore...
-          if (advance()) break; // advance, because of "*"
+          if (advance()) break; // advance, because of "*", break because of end of file
           break;
         } else {
           comment += curChar();
-          if (advance()) break;
+          if (advance()) break; // break because of end of file
         }
       }
     }
@@ -250,9 +294,7 @@ export namespace lexer {
 
     while (isAlphaNumeric(curChar())) {
       identifier += curChar();
-      if (advance())
-        // is at line end!
-        break;
+      if (advance()) break; // break because of end of file
     }
 
     currentIndex--; // because we eat one too much!!
@@ -266,13 +308,13 @@ export namespace lexer {
     if (curChar() === '0' && nextChars() === 'b') {
       // number is in the binary binary format
       number += 'b';
-      advance();
+      advance(); // no need to check for end of file, because nextChars() is known
 
       // the second one to check for invalid identifiers and keywords
       while (!!nextChars().match(numeric) || !!nextChars().match(/[a-zA-Z_]/)) {
         //while (!nextChars().match(/ |\t|\n/)) {
         number += nextChars();
-        advance();
+        if (advance()) break; // break because of end of file
       }
     } else if (curChar() === '0' && nextChars() === 'x') {
       // hex format
@@ -282,7 +324,7 @@ export namespace lexer {
       while (!!nextChars().match(numeric) || !!nextChars().match(/[a-zA-Z_]/)) {
         //while (!nextChars().match(/ |\t|\n/)) {
         number += nextChars();
-        advance();
+        if (advance()) break; // break because of end of file
       }
     } else {
       // decimal format
@@ -290,7 +332,7 @@ export namespace lexer {
       while (!!nextChars().match(numeric) || !!nextChars().match(/[a-zA-Z_]/)) {
         //while (!nextChars().match(/ |\t|\n/)) {
         number += nextChars();
-        advance();
+        if (advance()) break; // break because of end of file
       }
       // let gotDot: bool = false;
       // let gotE: bool = false;
@@ -347,11 +389,12 @@ export namespace lexer {
     return {
       charCount: number.length - 1,
       number,
+      // check if it is an actuall valid literal
       valid:
-        !!number.match(/^0b([01]_?)+[01]$/) ||
-        !!number.match(/^0x([0-9a-fA-F]_?)+[0-9a-fA-F]$/) ||
+        !!number.match(/^0b([01]_?)*[01]$/) ||
+        !!number.match(/^0x([0-9a-fA-F]_?)*[0-9a-fA-F]$/) ||
         // todo nothing between . and e, trailling .
-        !!number.match(/^\d(_?\d)*(((\.)(\d_?)*\d)|\.)?([eE][-+]?(\d_?)*\d)?$/)
+        !!number.match(/^\d(_?\d)*((\.(\d_?)*\d)|\.)?([eE][-+]?(\d_?)*\d)?$/)
     };
   }
 
@@ -363,7 +406,7 @@ export namespace lexer {
       if (curChar() !== '\\' && nextChars() === '"') {
         // stop string next char
         str += curChar();
-        advance();
+        if (advance()) break; // TODO, needed? break because of end of file
 
         // check if the next char is a single and valid string type character
         if (
@@ -372,13 +415,13 @@ export namespace lexer {
           (nextChars(2)[1] === undefined || !isAlphaNumeric(nextChars(2)[1]))
         ) {
           str += '"' + nextChars();
-          advance();
+          if (advance()) break; // TODO, needed? break because of end of file
         } else str += '"';
 
         break;
       } else {
         str += curChar();
-        advance();
+        if (advance()) break; // break because of end of file
       }
     }
 
@@ -478,6 +521,6 @@ console.log(
   //0b_ // invalid
   lexer.lexer(`
 let 0n = 5.0z;
-a
-`)
+let z = "te";
+0b0`)
 );
