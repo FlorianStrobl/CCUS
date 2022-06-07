@@ -274,15 +274,14 @@ export namespace lexer {
 
     log.log('lexer', `finished lexing in ${Date.now() - startTime} ms`);
 
-    // TODO: add type
-    const errors: any[] = [];
+    const errors: log.codeInfoRaw[] = [];
     for (const [value, index] of invalidLexems) {
       // {
       //  code: errorCodes;
       //  description: string;
       //  message: string;
       //}
-      let error: any = {
+      let error: log.codeInfoRaw = {
         index: index,
         length: value.length,
         markColor: 31,
@@ -331,42 +330,26 @@ export namespace lexer {
       }
     }
 
-    // TODO
-    /**
-     * [
-      {
-        index: 10,
-        length: 4,
-        markColor: 31,
-        messageColor: 31,
-        message: 'invalid number literal',
-        infoCode: '1483',
-        infoType: 'error',
-        infoDescription: 'invalid literal'
-      },
-      {
-        index: 5,
-        length: 2,
-        markColor: 31,
-        messageColor: 31,
-        message: 'invalid number literal',
-        infoCode: '1483',
-        infoType: 'warning',
-        infoDescription: 'invalid literal'
-      },
-      {
-        index: 24,
-        length: 4,
-        markColor: 31,
-        messageColor: 31,
-        message: 'invalid string literal',
-        infoCode: '5251',
-        infoType: 'error',
-        infoDescription: 'invalid literal'
-      }
-    ]
-     */
-    log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, errors, true);
+    //log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, errors, true);
+    log.logInfo(
+      { fileName: 'myFile2', author: 'lexer' },
+      code,
+      [
+        [
+          {
+            index: 24,
+            length: 2,
+            markColor: 31,
+            messageColor: 31,
+            message: 'test',
+            infoCode: '5251',
+            infoType: 'error',
+            infoDescription: 'testtest'
+          }
+        ]
+      ],
+      true
+    );
     //log.printErrors(code, invalidLexems);
 
     return lexems;

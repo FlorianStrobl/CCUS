@@ -6,7 +6,7 @@ export namespace logger {
     author: string;
   }
 
-  interface codeInfoRaw {
+  export interface codeInfoRaw {
     index: number;
     length: number;
     markColor: number;
@@ -17,17 +17,17 @@ export namespace logger {
     infoDescription: string;
   }
 
-  interface codeInfoRelativ {
-    line: number;
-    column: number;
-    length: number;
-    markColor: number;
-    messageColor: number;
-    message: string;
-    infoCode: string;
-    infoType: 'warning' | 'error';
-    infoDescription: string;
-  }
+  // interface codeInfoRelativ {
+  //   line: number;
+  //   column: number;
+  //   length: number;
+  //   markColor: number;
+  //   messageColor: number;
+  //   message: string;
+  //   infoCode: string;
+  //   infoType: 'warning' | 'error';
+  //   infoDescription: string;
+  // }
 
   export function log(author: string, ...data: any[]): void {
     console.log(`[${author}]: `, ...data);
@@ -40,82 +40,88 @@ export namespace logger {
   export function logInfo(
     infos: logInfoInfos,
     code: string,
-    codeInfos: // | (codeInfoRaw | codeInfoRaw[])[] // TODO, multiple errors within a line, sort by column, ...
-    // | (codeInfoRelativ | codeInfoRelativ[])[]| (codeInfoRaw | codeInfoRaw[])[]
-    codeInfoRelativ[] | codeInfoRaw[],
+    codeInfos: (codeInfoRaw | codeInfoRaw[])[], // TODO, multiple errors within a line, sort by column, ...
     withColor: boolean = true
   ): void {
     for (let codeInfo of codeInfos) {
-      let line: number = -1;
-      let column: number = -1;
-      let len: number = -1; // the length of the wrong part
+      if (!Array.isArray(codeInfo)) {
+        // its not an array
 
-      // @ts-expect-error
-      if (codeInfo.line !== undefined) {
-        codeInfo = codeInfo as codeInfoRelativ;
-        line = codeInfo.line;
-        column = codeInfo.column;
+        let line: number = getLinePos(codeInfo.index);
+        let column: number = getColumnPos(codeInfo.index);
+        const curLine: string = getLines()[line];
+
+        let len: number = -1; // the length of the wrong part
+        // calculate the length of the invalid part, to avoid going over the line
+        if (curLine.length >= column + codeInfo.length) len = codeInfo.length;
+        // the -1 for the last \n to not get marked with ^
+        // TODO // error(
+        //   'logger',
+        //   'internal error while logging informations: length of colored path was too long'
+        // );
+        else
+          len =
+            curLine.length - column - 1 > 0 ? curLine.length - column - 1 : 1;
+
+        const previousCode: string = curLine.slice(0, column);
+        let errorCode: string = curLine.slice(column, column + len);
+        let followingCode: string = curLine.slice(column + len, curLine.length);
+
+        // unwanted special cases with \n
+        if (errorCode.endsWith('\n'))
+          errorCode = errorCode.slice(0, errorCode.length - 1); // it was the last character of the current line
+        if (followingCode[followingCode.length - 1] === '\n')
+          followingCode = followingCode.slice(0, followingCode.length - 1);
+
+        const mainMsg: string = `${previousCode}${addColor(
+          errorCode,
+          codeInfo.markColor,
+          withColor
+        )}${followingCode}`;
+
+        const spacing: string = addColor(
+          `${' '.repeat(line.toString().length + 1)}| `,
+          36,
+          withColor
+        );
+
+        const what: string = `${addColor(
+          codeInfo.infoType + '[' + codeInfo.infoCode + ']',
+          codeInfo.infoType === 'error' ? 31 : 90,
+          withColor
+        )}: ${addColor(codeInfo.infoDescription, 33, withColor)}`;
+        const where: string = `${addColor(' -->', 34, withColor)} ${addColor(
+          infos.fileName + ':' + line.toString() + ':' + column.toString(),
+          90,
+          withColor
+        )} :`;
+        const header: string = what + '\n' + where + '\n';
+
+        const loggedMsg: string = `${spacing}\n${addColor(
+          `${line} | `,
+          36,
+          withColor
+        )}${mainMsg}\n${
+          spacing +
+          ' '.repeat(column) +
+          addColor('^'.repeat(len), codeInfo.markColor, withColor) +
+          ' ' +
+          codeInfo.message
+            .replace('{arg}', errorCode)
+            .split('\n')
+            .join('\n' + spacing)
+        }\n${spacing}`;
+
+        //addColor(infos.author)
+        console.log(header + loggedMsg + '\n\n');
       } else {
-        codeInfo = codeInfo as codeInfoRaw;
-        line = getLinePos(codeInfo.index);
-        column = getColumnPos(codeInfo.index);
+        // TODO is an array of errors, if not for a single line => internal error
+        console.log('multiple errors!');
+        codeInfo.sort((elementA, elementB) => {
+          return elementB.index - elementA.index; // sort from biggest to smallest
+        });
+        let msgs: string[] = new Array(codeInfo.length).fill('');
       }
-
-      const curLine: string = getLines()[line];
-      // calculate the length of the invalid part, to avoid going over the line
-      if (curLine.length >= column + codeInfo.length) len = codeInfo.length;
-      // the -1 for the last \n to not get marked with ^
-      else
-        len = curLine.length - column - 1 > 0 ? curLine.length - column - 1 : 1;
-
-      const previousCode: string = curLine.slice(0, column);
-      let errorCode: string = curLine.slice(column, column + len);
-      let followingCode: string = curLine.slice(column + len, curLine.length);
-
-      // unwanted special cases with \n
-      if (errorCode === '\n') errorCode = ''; // it was the last character of the current line
-      if (followingCode[followingCode.length - 1] === '\n')
-        followingCode = followingCode.slice(0, followingCode.length - 1);
-
-      const msg: string = `${previousCode}${addColor(
-        errorCode,
-        codeInfo.markColor,
-        withColor
-      )}${followingCode}`;
-
-      const codeSpace: string = addColor(
-        `${' '.repeat(line.toString().length + 1)}| `,
-        36,
-        withColor
-      );
-
-      const what: string = `${addColor(
-        codeInfo.infoType + '[' + codeInfo.infoCode + ']',
-        codeInfo.infoType === 'error' ? 31 : 90,
-        withColor
-      )}: ${addColor(codeInfo.infoDescription, 33, withColor)}`;
-      const where: string = `${addColor(' -->', 34, withColor)} ${addColor(
-        infos.fileName + ':' + line.toString() + ':' + column.toString(),
-        90,
-        withColor
-      )} :`;
-      const loggedMsg: string = `${codeSpace}\n${addColor(
-        `${line} | `,
-        36,
-        withColor
-      )}${msg}\n${
-        codeSpace +
-        ' '.repeat(column) +
-        addColor('^'.repeat(len), codeInfo.markColor, withColor) +
-        ' ' +
-        codeInfo.message
-          .replace('{arg}', errorCode)
-          .split('\n')
-          .join('\n' + codeSpace)
-      }\n${codeSpace}`;
-
-      //addColor(infos.author)
-      console.log(what + '\n' + where + '\n' + loggedMsg + '\n\n');
     }
 
     function getLines(): string[] {
