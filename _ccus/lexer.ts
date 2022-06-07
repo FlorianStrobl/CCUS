@@ -330,14 +330,14 @@ export namespace lexer {
       }
     }
 
-    //log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, errors, true);
+    // log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, errors, true);
     log.logInfo(
       { fileName: 'myFile2', author: 'lexer' },
       code,
       [
         [
           {
-            index: 24,
+            index: 0,
             length: 2,
             markColor: 31,
             messageColor: 31,
@@ -345,12 +345,31 @@ export namespace lexer {
             infoCode: '5251',
             infoType: 'error',
             infoDescription: 'testtest'
+          },
+          {
+            index: 4,
+            length: 5,
+            markColor: 31,
+            messageColor: 31,
+            message: 'test2',
+            infoCode: '5111',
+            infoType: 'error',
+            infoDescription: 'test2test2'
+          },
+          {
+            index: 10,
+            length: 4,
+            markColor: 31,
+            messageColor: 31,
+            message: 'test3',
+            infoCode: '4002',
+            infoType: 'error',
+            infoDescription: 'test3test3'
           }
         ]
       ],
       true
     );
-    //log.printErrors(code, invalidLexems);
 
     return lexems;
   }
@@ -674,10 +693,7 @@ export namespace lexer {
 
 //console.log(
 lexer.lexe(
-  `
-  @ // hi!
-let n = 0b1230;
-let x = 0x421FK34;
+  `let n = 0b1230; let x = 0x421FK34;
 let str = "testa\\"a;
 import std;
 

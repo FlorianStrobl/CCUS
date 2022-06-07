@@ -47,24 +47,22 @@ export namespace logger {
       if (!Array.isArray(codeInfo)) {
         // its not an array
 
-        let line: number = getLinePos(codeInfo.index);
-        let column: number = getColumnPos(codeInfo.index);
+        const line: number = getLinePos(codeInfo.index);
+        const column: number = getColumnPos(codeInfo.index);
         const curLine: string = getLines()[line];
 
-        let len: number = -1; // the length of the wrong part
-        // calculate the length of the invalid part, to avoid going over the line
-        if (curLine.length >= column + codeInfo.length) len = codeInfo.length;
-        // the -1 for the last \n to not get marked with ^
-        // TODO // error(
-        //   'logger',
-        //   'internal error while logging informations: length of colored path was too long'
-        // );
-        else
-          len =
-            curLine.length - column - 1 > 0 ? curLine.length - column - 1 : 1;
+        // the length of the wrong part, fixes buggs when going over the \n at the end of the line
+        const len: number = getLengthOfMarkedPart(
+          curLine,
+          column,
+          codeInfo.length
+        );
 
+        // the code before the invalid part
         const previousCode: string = curLine.slice(0, column);
+        // the invalid code
         let errorCode: string = curLine.slice(column, column + len);
+        // the code after the invalid part
         let followingCode: string = curLine.slice(column + len, curLine.length);
 
         // unwanted special cases with \n
@@ -120,7 +118,72 @@ export namespace logger {
         codeInfo.sort((elementA, elementB) => {
           return elementB.index - elementA.index; // sort from biggest to smallest
         });
+
         let msgs: string[] = new Array(codeInfo.length).fill('');
+        for (let i = 0; i < codeInfo.length; ++i) {
+          const line: number = getLinePos(codeInfo[i].index);
+          const column: number = getColumnPos(codeInfo[i].index);
+          const curLine: string = getLines()[line];
+          const len: number = getLengthOfMarkedPart(
+            curLine,
+            column,
+            codeInfo.length
+          );
+
+          const spacing: string = addColor(
+            `${' '.repeat(line.toString().length + 1)}| `,
+            36,
+            withColor
+          );
+          const errorCode: string = curLine.slice(column, column + len);
+          const helpMsg: string = codeInfo[i].message
+            .replace('{arg}', errorCode)
+            .split('\n')
+            .join('\n' + spacing);
+
+          // the invalid code
+          msgs[i] = `${
+            spacing + ' '.repeat(column) + '^'.repeat(len) + ' ' + helpMsg
+          }`;
+        }
+
+        // add the "|" to all previous messages
+        for (let i = 0; i < msgs.length - 1; ++i)
+          for (let y = 1; i + y < msgs.length; ++y)
+            // TODO, what if color was added...
+            msgs[i] = insertAt(msgs[i], msgs[i + y].indexOf('^'), '|');
+
+        // TODO merge that into a toHeader() function
+        const column: number = getColumnPos(codeInfo[0].index);
+        const line: number = getLinePos(codeInfo[0].index);
+        const curLine: string = getLines()[line];
+        // const len: number = getLengthOfMarkedPart(
+        //   curLine,
+        //   column,
+        //   codeInfo[0].length
+        // );
+        const spacing: string = addColor(
+          `${' '.repeat(line.toString().length + 1)}| `,
+          36,
+          withColor
+        );
+        const what: string = `${addColor(
+          codeInfo[0].infoType + '[' + codeInfo[0].infoCode + ']',
+          codeInfo[0].infoType === 'error' ? 31 : 90,
+          withColor
+        )}: ${addColor(codeInfo[0].infoDescription, 33, withColor)}`;
+        const where: string = `${addColor(' -->', 34, withColor)} ${addColor(
+          infos.fileName + ':' + line.toString() + ':' + column.toString(),
+          90,
+          withColor
+        )} :`;
+        const header: string = what + '\n' + where + '\n';
+        //const errorCode: string = curLine.slice(column, column + len);
+        // TODO insert empty lines inside msgs.join which have the same `|` as the upper line
+        console.log(
+          header + spacing + curLine + '' + msgs.join('\n' + spacing + '\n')
+        );
+        //console.log(msgs.join(''));
       }
     }
 
@@ -147,10 +210,40 @@ export namespace logger {
       // as it is (- (-1)) => (index + 1); and this is occuring then (index===0)
     }
 
+    function getLengthOfMarkedPart(
+      curLine: string,
+      column: number,
+      length: number
+    ): number {
+      let len: number = -1;
+      // calculate the length of the invalid part, to avoid going over the line
+      if (curLine.length >= column + length) len = length;
+      // the -1 for the last \n to not get marked with ^
+      // TODO // error(
+      //   'logger',
+      //   'internal error while logging informations: length of colored path was too long'
+      // );
+      else
+        len = curLine.length - column - 1 > 0 ? curLine.length - column - 1 : 1;
+      return len;
+    }
+
     function getLineIndex(line: number): number {
       const previousLines: string[] = getLines().slice(0, line - 1); // -1 to not include the line itself
       // +line-1 includes the "\n" between the lines
       return previousLines.join('').length + line - 1;
+    }
+
+    function insertAt(
+      string: string,
+      index: number,
+      substring: string
+    ): string {
+      return (
+        string.slice(0, index) +
+        substring +
+        string.slice(index + substring.length, string.length)
+      );
     }
   }
 
