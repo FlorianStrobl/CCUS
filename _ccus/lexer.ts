@@ -16,6 +16,7 @@ export namespace lexer {
     column: int; // position in the line
   }
 
+  // TODO int literal, float literal, char literal, string literal
   // TODO, special comment #TODO, #Expect-error
   export const enum tokenType {
     whitespaces = 'whitespace', // any of: ["\n", " ", "\t"]
@@ -201,38 +202,38 @@ export namespace lexer {
     }
 
     // TODO
-    // log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, [
-    //   {
-    //     index: 10,
-    //     length: 4,
-    //     markColor: 31,
-    //     messageColor: 31,
-    //     message: 'invalid number literal',
-    //     infoCode: '1483',
-    //     infoType: 'error',
-    //     infoDescription: 'invalid literal'
-    //   },
-    //   {
-    //     index: 5,
-    //     length: 2,
-    //     markColor: 31,
-    //     messageColor: 31,
-    //     message: 'invalid number literal',
-    //     infoCode: '1483',
-    //     infoType: 'warning',
-    //     infoDescription: 'invalid literal'
-    //   },
-    //   {
-    //     index: 24,
-    //     length: 4,
-    //     markColor: 31,
-    //     messageColor: 31,
-    //     message: 'invalid string literal',
-    //     infoCode: '5251',
-    //     infoType: 'error',
-    //     infoDescription: 'invalid literal'
-    //   }
-    // ]);
+    log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, [
+      {
+        index: 10,
+        length: 4,
+        markColor: 31,
+        messageColor: 31,
+        message: 'invalid number literal',
+        infoCode: '1483',
+        infoType: 'error',
+        infoDescription: 'invalid literal'
+      },
+      {
+        index: 5,
+        length: 2,
+        markColor: 31,
+        messageColor: 31,
+        message: 'invalid number literal',
+        infoCode: '1483',
+        infoType: 'warning',
+        infoDescription: 'invalid literal'
+      },
+      {
+        index: 24,
+        length: 4,
+        markColor: 31,
+        messageColor: 31,
+        message: 'invalid string literal',
+        infoCode: '5251',
+        infoType: 'error',
+        infoDescription: 'invalid literal'
+      }
+    ]);
 
     return lexems;
   }
@@ -510,23 +511,23 @@ export namespace lexer {
   }
 
   // get the line in which this index exists
-  function getLine(index: int = currentIndex): str {
-    if (index >= code.length) return '';
+  // function getLine(index: int = currentIndex): str {
+  //   if (index >= code.length) return '';
 
-    let ans: str = '';
-    let inStr: bool = false;
+  //   let ans: str = '';
+  //   let inStr: bool = false;
 
-    for (let i = 0; i < code.length; ++i) {
-      if (i === index) inStr = true;
+  //   for (let i = 0; i < code.length; ++i) {
+  //     if (i === index) inStr = true;
 
-      if (code[i] === '\n')
-        if (!inStr) ans = '';
-        else break;
-      else ans += code[i];
-    }
+  //     if (code[i] === '\n')
+  //       if (!inStr) ans = '';
+  //       else break;
+  //     else ans += code[i];
+  //   }
 
-    return ans;
-  }
+  //   return ans;
+  // }
   // #endregion
   // #endregion
 }
