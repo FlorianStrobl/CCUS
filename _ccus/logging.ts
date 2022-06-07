@@ -169,9 +169,10 @@ export namespace logger {
     if (!active) return msg;
     return '\u001b[' + color + 'm' + msg + '\u001b[0m';
   }
+}
 
-  // #region TODO
-  // TODO wrong numeric literals!
+/**
+ *   // TODO wrong numeric literals!
   const defaultErrorMsg = [
     ['`', `did you mean "${addColor('"')}" instead of "${addColor('`', 31)}"?`],
     ["'", `did you mean "${addColor('"')}" instead of "${addColor("'", 31)}"?`],
@@ -190,7 +191,7 @@ export namespace logger {
     /**
      * get errors from each line, generate a ^^ message underling all of the mistakes
      * make it dynamic such that the error msg can be adjusted fastly
-     */
+     /
 
     // #region merge following characters, TODO not really needed...
     // // search for characters which are directly one after another
@@ -269,7 +270,7 @@ export namespace logger {
             //     ? log.addColor(e, 31)
             //     : e;
             // })
-            // .join('') /* current line */
+            // .join('') /* current line /
           }\n${ans.errorMsg.replace(/\^/g, addColor('^', 31))}${ans.helpMsg}`
       );
     }
@@ -337,5 +338,4 @@ export namespace logger {
   function getLinePos(code: string, index: number): number {
     return (code.slice(0, index + 1).match(/\n/g) || []).length + 1;
   }
-  // #endregion
-}
+ */

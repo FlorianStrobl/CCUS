@@ -367,7 +367,7 @@ export namespace lexer {
     ]
      */
     log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, errors, true);
-    log.printErrors(code, invalidLexems);
+    //log.printErrors(code, invalidLexems);
 
     return lexems;
   }
