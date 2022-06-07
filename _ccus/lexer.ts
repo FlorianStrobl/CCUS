@@ -28,6 +28,16 @@ export namespace lexer {
     stringLiteral = 'stringLiteral' // "a", "hello world", "regexp"r
   }
 
+  // TODO, unexpectedEndOfFile, for "str...; or for 0b/0x followed by nothing
+  const enum errorCodes {
+    invalidCharacter = '0001',
+    invalidBinaryLiteral = '0002',
+    invalidHexadecimalLiteral = '0003',
+    invalidNumberLiteral = '0004',
+    invalidStringLiteral = '0005',
+    unexpectedEndOfFile = '0006'
+  }
+
   const symbols: str[] = [
     '.', // seperator
     ',', // enumerator? TODO
@@ -74,6 +84,7 @@ export namespace lexer {
   const keywords: str[] = [
     'bit',
     'let',
+    'mut',
     'func',
     'return',
     'if',
@@ -84,6 +95,71 @@ export namespace lexer {
   // string modifier like "character", "regex", ...
   const stringMod: char[] = ['r', 'c'];
 
+  //
+  const errorMsgs: {
+    [code: string]: { code: errorCodes; description: string; message: string };
+  } = {
+    [errorCodes.invalidCharacter]: {
+      code: errorCodes.invalidCharacter,
+      description: 'invalid character',
+      message: log.addColor('illegal character `{arg}`.', 31)
+    },
+    [errorCodes.invalidBinaryLiteral]: {
+      code: errorCodes.invalidBinaryLiteral,
+      description: 'invalid literal',
+      message: `${log.addColor(
+        'invalid binary literal.',
+        31
+      )}\n\n${log.addColor(
+        '= a binary literal has the form: /0b([01]_?)*[01]/',
+        34
+      )}`
+    },
+    [errorCodes.invalidHexadecimalLiteral]: {
+      code: errorCodes.invalidHexadecimalLiteral,
+      description: 'invalid literal',
+      message: `${log.addColor(
+        'invalid hexadecimal literal.',
+        31
+      )}\n\n${log.addColor(
+        '= a hexadecimal literal has the form: /0x([a-fA-F0-9]_?)*[a-fA-F0-9]/',
+        34
+      )}`
+    },
+    [errorCodes.invalidNumberLiteral]: {
+      code: errorCodes.invalidNumberLiteral,
+      description: 'invalid literal',
+      message: `${log.addColor(
+        'invalid number literal.',
+        31
+      )}\n\n${log.addColor(
+        '= a number literal has the form: /\\d(_?\\d)*((.(\\d_?)*\\d)|.)?([eE][-+]?(\\d_?)*\\d)?/',
+        34
+      )}`
+    },
+    [errorCodes.invalidStringLiteral]: {
+      code: errorCodes.invalidStringLiteral,
+      description: 'invalid literal',
+      message: `${log.addColor(
+        'invalid string literal.',
+        31
+      )}\n\n${log.addColor(
+        '= a string literal has the form: /"([^\\n]*)"[a-zA-Z]?/',
+        34
+      )}\n${log.addColor(
+        `  the given string literal identifier is not defined. defined identifier: [${stringMod.join(
+          ', '
+        )}]`,
+        34
+      )}`
+    },
+    [errorCodes.unexpectedEndOfFile]: {
+      code: errorCodes.unexpectedEndOfFile,
+      description: 'unexpected end of file',
+      message: `${log.addColor('file was unexpectetly finished.', 31)}`
+    }
+  };
+
   let currentIndex: int = 0;
   let code: str = '';
   // #endregion
@@ -93,7 +169,7 @@ export namespace lexer {
 
     code = source;
     const lexems: lexem[] = [];
-    let invalidLexems: [char: char, index: int][] = [];
+    let invalidLexems: [value: char, index: int][] = [];
 
     // #region main loop
     for (let i = 0; i < source.length; ++i) {
@@ -131,13 +207,15 @@ export namespace lexer {
 
         i += ans.charCount;
 
-        lexems.push({
-          content: ans.str,
-          type: tokenType.numericLiteral,
-          index: startingIndex,
-          line: getLinePos(startingIndex),
-          column: getColumnPos(startingIndex)
-        });
+        if (ans.valid)
+          lexems.push({
+            content: ans.str,
+            type: tokenType.numericLiteral,
+            index: startingIndex,
+            line: getLinePos(startingIndex),
+            column: getColumnPos(startingIndex)
+          });
+        else invalidLexems.push([ans.str, startingIndex]);
       } else if (startLikeSymbol(curChar())) {
         // started string
         const startingIndex: int = currentIndex;
@@ -197,12 +275,70 @@ export namespace lexer {
     log.log('lexer', `finished lexing in ${Date.now() - startTime} ms`);
 
     //log.printErrors(code, invalidLexems);
-    const errorMsgs = [];
-    for (const invalidLexem of invalidLexems) {
+    const errors: any[] = [];
+    for (const [value, index] of invalidLexems) {
+      // {
+      //  code: errorCodes;
+      //  description: string;
+      //  message: string;
+      //}
+      let error: any = {
+        index: index,
+        length: value.length,
+        markColor: 31,
+        messageColor: 31,
+        message: '',
+        infoType: 'error',
+        infoCode: '',
+        infoDescription: ''
+      };
+
+      if (value.startsWith('0b')) {
+        let _error = errorMsgs[errorCodes.invalidBinaryLiteral];
+        error.message = _error.message;
+        error.infoCode = _error.code;
+        error.infoDescription = _error.description;
+        errors.push(error);
+      } else if (value.startsWith('0x')) {
+        let _error = errorMsgs[errorCodes.invalidHexadecimalLiteral];
+        error.message = _error.message;
+        error.infoCode = _error.code;
+        error.infoDescription = _error.description;
+        errors.push(error);
+      } else if (!!value[0].match(/\d/)) {
+        let _error = errorMsgs[errorCodes.invalidNumberLiteral];
+        error.message = _error.message;
+        error.infoCode = _error.code;
+        error.infoDescription = _error.description;
+        errors.push(error);
+      } else if (value.startsWith('"')) {
+        console.log('this!', value);
+        if (!!value.match(/^(.|\\")*"[a-zA-Z]?$/)) {
+          let _error = errorMsgs[errorCodes.invalidStringLiteral];
+          error.message = _error.message;
+          error.infoCode = _error.code;
+          error.infoDescription = _error.description;
+          errors.push(error);
+        } else {
+          let _error = errorMsgs[errorCodes.unexpectedEndOfFile];
+          error.message = _error.message;
+          error.infoCode = _error.code;
+          error.infoDescription = _error.description;
+          //error.index = index + 10; // + the chars required to get to the end of the line
+          errors.push(error);
+        }
+      } else {
+        let _error = errorMsgs[errorCodes.invalidCharacter];
+        error.message = _error.message;
+        error.infoCode = _error.code;
+        error.infoDescription = _error.description;
+        errors.push(error);
+      }
     }
 
     // TODO
-    log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, [
+    /**
+     * [
       {
         index: 10,
         length: 4,
@@ -233,7 +369,9 @@ export namespace lexer {
         infoType: 'error',
         infoDescription: 'invalid literal'
       }
-    ]);
+    ]
+     */
+    log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, errors);
 
     return lexems;
   }
@@ -394,8 +532,9 @@ export namespace lexer {
     };
   }
 
-  function eatString(): { charCount: int; str: str } {
+  function eatString(): { charCount: int; str: str; valid: bool } {
     let str: str = '';
+    let isValid: bool = true;
 
     while (true) {
       // handle "\n", "\t", \uxxxx and escaped \  "\\"
@@ -404,12 +543,15 @@ export namespace lexer {
         str += curChar();
         if (advance()) break; // TODO, needed? break because of end of file
 
+        // add the r in ""r
+        // TODO what if it is ""abc, and what if it is end of file?
         // check if the next char is a single and valid string type character
         if (
-          stringMod.includes(nextChars()) &&
           // check if it is not an identifier/keyword
-          (nextChars(2)[1] === undefined || !isAlphaNumeric(nextChars(2)[1]))
+          nextChars() !== undefined &&
+          isAlphaNumeric(nextChars())
         ) {
+          isValid = stringMod.includes(nextChars());
           str += '"' + nextChars();
           if (advance()) break; // TODO, needed? break because of end of file
         } else str += '"';
@@ -417,7 +559,10 @@ export namespace lexer {
         break;
       } else {
         str += curChar();
-        if (advance()) break; // break because of end of file
+        if (advance()) {
+          isValid = false;
+          break; // break because of end of file
+        }
       }
     }
 
@@ -439,7 +584,8 @@ export namespace lexer {
         })
         .replace(/\\u(\d{4})/, (_, digits) =>
           String.fromCharCode(Number('0x' + (digits as string)))
-        )
+        ),
+      valid: isValid
     };
   }
 
@@ -532,7 +678,7 @@ export namespace lexer {
   // #endregion
 }
 
-// console.log(
+//console.log(
 //   // TODO lex empty string, lex string with space, lex string with single invalid character
 //   // TODO last char == "\n" vs not (and then last char invalid or not)
 //   // 0b10_1010___1_ // invalid
@@ -548,9 +694,13 @@ export namespace lexer {
 // 0b0`)
 // );
 
-console.log(
-  lexer.lexe(
-    `
+//console.log(
+lexer.lexe(
+  `
+  @ // hi!
+let n = 0b1230;
+let x = 0x421FK34;
+let str = "testa\\"a;
 import std;
 
 func main() {
@@ -569,7 +719,5 @@ func f(x: int32): int32 {
   }
 }
 `
-  )
-  //.map((str) => str.content)
-  //.join(' ')
 );
+//);

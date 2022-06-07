@@ -6,7 +6,7 @@ import { parser } from './parser';
 const src: string = fr.getCode('E:/Data/Downloads/duktape.c');
 //console.log('src: ', src);
 
-const lexems = lexer.lexer(src);
+const lexems = lexer.lexe(src);
 //console.log(lexems);
 //console.log('lexems: ', lexems);
 

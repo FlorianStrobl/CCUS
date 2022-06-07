@@ -40,13 +40,14 @@ export namespace logger {
   export function logInfo(
     infos: logInfoInfos,
     code: string,
-    codeInfos: // | (codeInfoRaw | codeInfoRaw[])[]
+    codeInfos: // | (codeInfoRaw | codeInfoRaw[])[] // TODO, multiple errors within a line, sort by column, ...
     // | (codeInfoRelativ | codeInfoRelativ[])[]| (codeInfoRaw | codeInfoRaw[])[]
     codeInfoRelativ[] | codeInfoRaw[]
   ): void {
     for (let codeInfo of codeInfos) {
       let line: number = -1;
       let column: number = -1;
+      let len: number = -1; // the length of the wrong part
 
       // @ts-expect-error
       if (codeInfo.line !== undefined) {
@@ -60,41 +61,54 @@ export namespace logger {
       }
 
       const curLine: string = getLines()[line];
+      // calculate the length of the invalid part, to avoid going over the line
+      if (curLine.length >= column + codeInfo.length) len = codeInfo.length;
+      else {
+        // the -1 for the last \n to not get marked with ^
+        len = curLine.length - column - 1 > 0 ? curLine.length - column - 1 : 1;
+        console.log(len);
+      }
 
-      const firstPart: string = curLine.slice(0, column);
-      let secondPart: string = curLine.slice(column, column + codeInfo.length);
-      let thirdPart: string = curLine.slice(
-        column + codeInfo.length,
-        curLine.length
-      );
+      const previousCode: string = curLine.slice(0, column);
+      let errorCode: string = curLine.slice(column, column + len);
+      let followingCode: string = curLine.slice(column + len, curLine.length);
 
       // unwanted special cases with \n
-      if (secondPart === '\n') secondPart = ''; // it was the last character of the current line
-      if (thirdPart[thirdPart.length - 1] === '\n')
-        thirdPart = thirdPart.slice(0, thirdPart.length - 1);
+      if (errorCode === '\n') errorCode = ''; // it was the last character of the current line
+      if (followingCode[followingCode.length - 1] === '\n')
+        followingCode = followingCode.slice(0, followingCode.length - 1);
 
-      const msg: string = `${firstPart}${addColor(
-        secondPart,
+      const msg: string = `${previousCode}${addColor(
+        errorCode,
         codeInfo.markColor
-      )}${thirdPart}`;
+      )}${followingCode}`;
 
-      const codeSpace: string = addColor(' | ', 36);
+      const codeSpace: string = addColor(
+        `${' '.repeat(line.toString().length + 1)}| `,
+        36
+      );
 
       const what: string = `${addColor(
         codeInfo.infoType + '[' + codeInfo.infoCode + ']',
         codeInfo.infoType === 'error' ? 31 : 90
       )}: ${addColor(codeInfo.infoDescription, 33)}`;
       const where: string = `${addColor(' -->', 34)} ${addColor(
-        infos.fileName + '::' + line.toString(),
+        infos.fileName + ':' + line.toString() + ':' + column.toString(),
         90
       )} :`;
-      const loggedMsg: string = `${codeSpace}\n${codeSpace}${msg}\n${
+      const loggedMsg: string = `${codeSpace}\n${addColor(
+        `${line} | `,
+        36
+      )}${msg}\n${
         codeSpace +
         ' '.repeat(column) +
-        addColor('^'.repeat(codeInfo.length), codeInfo.markColor) +
+        addColor('^'.repeat(len), codeInfo.markColor) +
         ' ' +
-        addColor(codeInfo.message, codeInfo.messageColor)
-      }`;
+        codeInfo.message
+          .replace('{arg}', errorCode)
+          .split('\n')
+          .join('\n' + codeSpace)
+      }\n${codeSpace}`;
 
       //addColor(infos.author)
       console.log(what + '\n' + where + '\n' + loggedMsg + '\n\n');
