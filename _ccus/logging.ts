@@ -42,7 +42,8 @@ export namespace logger {
     code: string,
     codeInfos: // | (codeInfoRaw | codeInfoRaw[])[] // TODO, multiple errors within a line, sort by column, ...
     // | (codeInfoRelativ | codeInfoRelativ[])[]| (codeInfoRaw | codeInfoRaw[])[]
-    codeInfoRelativ[] | codeInfoRaw[]
+    codeInfoRelativ[] | codeInfoRaw[],
+    withColor: boolean = true
   ): void {
     for (let codeInfo of codeInfos) {
       let line: number = -1;
@@ -63,11 +64,9 @@ export namespace logger {
       const curLine: string = getLines()[line];
       // calculate the length of the invalid part, to avoid going over the line
       if (curLine.length >= column + codeInfo.length) len = codeInfo.length;
-      else {
-        // the -1 for the last \n to not get marked with ^
+      // the -1 for the last \n to not get marked with ^
+      else
         len = curLine.length - column - 1 > 0 ? curLine.length - column - 1 : 1;
-        console.log(len);
-      }
 
       const previousCode: string = curLine.slice(0, column);
       let errorCode: string = curLine.slice(column, column + len);
@@ -80,29 +79,34 @@ export namespace logger {
 
       const msg: string = `${previousCode}${addColor(
         errorCode,
-        codeInfo.markColor
+        codeInfo.markColor,
+        withColor
       )}${followingCode}`;
 
       const codeSpace: string = addColor(
         `${' '.repeat(line.toString().length + 1)}| `,
-        36
+        36,
+        withColor
       );
 
       const what: string = `${addColor(
         codeInfo.infoType + '[' + codeInfo.infoCode + ']',
-        codeInfo.infoType === 'error' ? 31 : 90
-      )}: ${addColor(codeInfo.infoDescription, 33)}`;
-      const where: string = `${addColor(' -->', 34)} ${addColor(
+        codeInfo.infoType === 'error' ? 31 : 90,
+        withColor
+      )}: ${addColor(codeInfo.infoDescription, 33, withColor)}`;
+      const where: string = `${addColor(' -->', 34, withColor)} ${addColor(
         infos.fileName + ':' + line.toString() + ':' + column.toString(),
-        90
+        90,
+        withColor
       )} :`;
       const loggedMsg: string = `${codeSpace}\n${addColor(
         `${line} | `,
-        36
+        36,
+        withColor
       )}${msg}\n${
         codeSpace +
         ' '.repeat(column) +
-        addColor('^'.repeat(len), codeInfo.markColor) +
+        addColor('^'.repeat(len), codeInfo.markColor, withColor) +
         ' ' +
         codeInfo.message
           .replace('{arg}', errorCode)
@@ -157,7 +161,12 @@ export namespace logger {
    *  blue: 44
    *  purple: 45
    */
-  export function addColor(msg: string, color: number = 32) {
+  export function addColor(
+    msg: string,
+    color: number = 32,
+    active: boolean = true
+  ) {
+    if (!active) return msg;
     return '\u001b[' + color + 'm' + msg + '\u001b[0m';
   }
 

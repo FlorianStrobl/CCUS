@@ -312,21 +312,16 @@ export namespace lexer {
         error.infoDescription = _error.description;
         errors.push(error);
       } else if (value.startsWith('"')) {
-        console.log('this!', value);
-        if (!!value.match(/^(.|\\")*"[a-zA-Z]?$/)) {
-          let _error = errorMsgs[errorCodes.invalidStringLiteral];
-          error.message = _error.message;
-          error.infoCode = _error.code;
-          error.infoDescription = _error.description;
-          errors.push(error);
-        } else {
-          let _error = errorMsgs[errorCodes.unexpectedEndOfFile];
-          error.message = _error.message;
-          error.infoCode = _error.code;
-          error.infoDescription = _error.description;
-          //error.index = index + 10; // + the chars required to get to the end of the line
-          errors.push(error);
-        }
+        let _error;
+        if (!!value.match(/^(.|\\")*"[a-zA-Z]?$/))
+          _error = errorMsgs[errorCodes.invalidStringLiteral];
+        //error.index = index + 10; // + the chars required to get to the end of the line
+        else _error = errorMsgs[errorCodes.unexpectedEndOfFile];
+
+        error.message = _error.message;
+        error.infoCode = _error.code;
+        error.infoDescription = _error.description;
+        errors.push(error);
       } else {
         let _error = errorMsgs[errorCodes.invalidCharacter];
         error.message = _error.message;
@@ -371,7 +366,7 @@ export namespace lexer {
       }
     ]
      */
-    log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, errors);
+    log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, errors, true);
 
     return lexems;
   }
@@ -605,7 +600,6 @@ export namespace lexer {
     }
 
     // symbol check => check if two character symbol
-    //console.log(curChar() + nextChars());
     if (isSymbol(curChar() + nextChars())) {
       symbol = curChar() + nextChars();
 
