@@ -60,8 +60,10 @@ export namespace lexer {
     '|', // binary
     '^', // binary
     '?', // tenary
-    ':' // tenary
-    //'...' // TODO, multiple args, or array/enumerator
+    ':', // tenary, type
+    '...', // multiple args, or array/enumerator
+    '++', // increment operator
+    '--' // decrement operator
     /**
      * _ for numbers and identifier/keywords
      * \ for string escape
@@ -85,7 +87,7 @@ export namespace lexer {
   let code: str = '';
   // #endregion
 
-  export function lexer(source: str): lexem[] {
+  export function lexe(source: str): lexem[] {
     const startTime: int = Date.now();
 
     code = source;
@@ -136,28 +138,20 @@ export namespace lexer {
           column: getColumnPos(startingIndex)
         });
       } else if (startLikeSymbol(curChar())) {
-        // symbol check => check if two character symbol
-        if (isSymbol(curChar() + nextChars())) {
-          lexems.push({
-            content: curChar() + nextChars(),
-            type: tokenType.symbol,
-            index: currentIndex,
-            line: getLinePos(),
-            column: getColumnPos()
-          });
+        // started string
+        const startingIndex: int = currentIndex;
 
-          // because next character already consumed
-          advance();
-          i++;
-        } else {
-          lexems.push({
-            content: curChar(),
-            type: tokenType.symbol,
-            index: currentIndex,
-            line: getLinePos(),
-            column: getColumnPos()
-          });
-        }
+        const ans = eatSymbol();
+
+        i += ans.charCount;
+
+        lexems.push({
+          content: ans.symbol,
+          type: tokenType.symbol,
+          index: startingIndex,
+          line: getLinePos(startingIndex),
+          column: getColumnPos(startingIndex)
+        });
       } else if (isDigit(curChar())) {
         // is a numeric literal
         const startingIndex: int = currentIndex;
@@ -206,38 +200,39 @@ export namespace lexer {
     for (const invalidLexem of invalidLexems) {
     }
 
-    log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, [
-      {
-        index: 10,
-        length: 4,
-        markColor: 31,
-        messageColor: 31,
-        message: 'invalid number literal',
-        infoCode: '1483',
-        infoType: 'error',
-        infoDescription: 'invalid literal'
-      },
-      {
-        index: 5,
-        length: 2,
-        markColor: 31,
-        messageColor: 31,
-        message: 'invalid number literal',
-        infoCode: '1483',
-        infoType: 'warning',
-        infoDescription: 'invalid literal'
-      },
-      {
-        index: 24,
-        length: 4,
-        markColor: 31,
-        messageColor: 31,
-        message: 'invalid string literal',
-        infoCode: '5251',
-        infoType: 'error',
-        infoDescription: 'invalid literal'
-      }
-    ]);
+    // TODO
+    // log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, [
+    //   {
+    //     index: 10,
+    //     length: 4,
+    //     markColor: 31,
+    //     messageColor: 31,
+    //     message: 'invalid number literal',
+    //     infoCode: '1483',
+    //     infoType: 'error',
+    //     infoDescription: 'invalid literal'
+    //   },
+    //   {
+    //     index: 5,
+    //     length: 2,
+    //     markColor: 31,
+    //     messageColor: 31,
+    //     message: 'invalid number literal',
+    //     infoCode: '1483',
+    //     infoType: 'warning',
+    //     infoDescription: 'invalid literal'
+    //   },
+    //   {
+    //     index: 24,
+    //     length: 4,
+    //     markColor: 31,
+    //     messageColor: 31,
+    //     message: 'invalid string literal',
+    //     infoCode: '5251',
+    //     infoType: 'error',
+    //     infoDescription: 'invalid literal'
+    //   }
+    // ]);
 
     return lexems;
   }
@@ -446,6 +441,33 @@ export namespace lexer {
         )
     };
   }
+
+  function eatSymbol(): { charCount: int; symbol: str } {
+    let symbol: str = curChar();
+
+    //advance();
+    // TODO, allow ..., but without having to check for ..;
+    // use .map((str) => str.slice(0, symbol.length)).includes(symbol + nextChars())
+    while (
+      symbols
+        .map((str) => str.slice(0, symbol.length + 1))
+        .includes(symbol + nextChars())
+    ) {
+      symbol += nextChars();
+      if (advance()) break; // break if
+    }
+
+    // symbol check => check if two character symbol
+    //console.log(curChar() + nextChars());
+    if (isSymbol(curChar() + nextChars())) {
+      symbol = curChar() + nextChars();
+
+      // because next character already consumed
+      advance();
+    }
+
+    return { charCount: symbol.length - 1, symbol };
+  }
   // #endregion
 
   // #region is
@@ -509,18 +531,44 @@ export namespace lexer {
   // #endregion
 }
 
+// console.log(
+//   // TODO lex empty string, lex string with space, lex string with single invalid character
+//   // TODO last char == "\n" vs not (and then last char invalid or not)
+//   // 0b10_1010___1_ // invalid
+//   // 3_1_1.1e-1_1 // valid
+//   // 0b1_0_1_0_1 // valid
+//   // 0b_1_ // invalid
+//   // 0b1_ // invalid
+//   //let _varißble = #$ \`sub\` + $ 'string';
+//   //0b_ // invalid
+//   lexer.lexe(`
+// let 0n = 5.0z;
+// let z = "te";
+// 0b0`)
+// );
+
 console.log(
-  // TODO lex empty string, lex string with space, lex string with single invalid character
-  // TODO last char == "\n" vs not (and then last char invalid or not)
-  // 0b10_1010___1_ // invalid
-  // 3_1_1.1e-1_1 // valid
-  // 0b1_0_1_0_1 // valid
-  // 0b_1_ // invalid
-  // 0b1_ // invalid
-  //let _varißble = #$ \`sub\` + $ 'string';
-  //0b_ // invalid
-  lexer.lexer(`
-let 0n = 5.0z;
-let z = "te";
-0b0`)
+  lexer.lexe(
+    `
+import std;
+
+func main() {
+  out(f(5));
+}
+
+func f(x: int32): int32 {
+  return 2 * g(x);
+
+  // func g(a: int32): int32 {
+  //   return ++a;
+  // }
+
+  func h(...a: int32[]): int32 {
+    return a[0];
+  }
+}
+`
+  )
+  //.map((str) => str.content)
+  //.join(' ')
 );
