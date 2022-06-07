@@ -274,7 +274,7 @@ export namespace lexer {
 
     log.log('lexer', `finished lexing in ${Date.now() - startTime} ms`);
 
-    //log.printErrors(code, invalidLexems);
+    // TODO: add type
     const errors: any[] = [];
     for (const [value, index] of invalidLexems) {
       // {
@@ -367,6 +367,7 @@ export namespace lexer {
     ]
      */
     log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, errors, true);
+    log.printErrors(code, invalidLexems);
 
     return lexems;
   }
