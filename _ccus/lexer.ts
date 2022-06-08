@@ -311,7 +311,7 @@ export namespace lexer {
         errors.push(error);
       } else if (value.startsWith('"')) {
         let _error;
-        if (!!value.match(/^(.|\\")*"[a-zA-Z]?$/))
+        if (!!value.match(/^(.|\n|\\")*"[a-zA-Z]?$/))
           _error = errorMsgs[errorCodes.invalidStringLiteral];
         //error.index = index + 10; // + the chars required to get to the end of the line
         else _error = errorMsgs[errorCodes.unexpectedEndOfFile];
@@ -331,7 +331,7 @@ export namespace lexer {
 
     log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, errors, true);
 
-    if (true)
+    if (false)
       log.logInfo(
         { fileName: 'myFile2', author: 'lexer' },
         code,
@@ -359,7 +359,7 @@ export namespace lexer {
               index: 4,
               length: 5,
               markColor: 32,
-              message: log.addColor('test2', 33),
+              message: log.addColor('^test^2 |', 33),
               infoCode: '5111',
               infoType: 'error',
               infoDescription: 'test2test2'
@@ -692,7 +692,8 @@ export namespace lexer {
 //console.log(
 lexer.lexe(
   `let n = 0b1230; let x = 0x421FK34;
-let str = "testa\\"a;
+let str = "testa
+"a;
 import std;
 
 func main() {
