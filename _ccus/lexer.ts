@@ -144,7 +144,7 @@ export namespace lexer {
         'invalid string literal.',
         31
       )}\n\n${log.addColor(
-        '= a string literal has the form: /"([^\\n]*)"[a-zA-Z]?/',
+        '= a string literal has the form: /"(.|\\")*"[a-zA-Z]?/',
         34
       )}\n${log.addColor(
         `  the given string literal identifier is not defined. defined identifier: [${stringMod.join(
