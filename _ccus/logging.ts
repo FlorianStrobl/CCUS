@@ -10,7 +10,6 @@ export namespace logger {
     index: number;
     length: number;
     markColor: number;
-    messageColor: number;
     message: string;
     infoCode: string;
     infoType: 'warning' | 'error';
@@ -83,20 +82,10 @@ export namespace logger {
           withColor
         );
 
-        const what: string = `${addColor(
-          codeInfo.infoType + '[' + codeInfo.infoCode + ']',
-          codeInfo.infoType === 'error' ? 31 : 90,
-          withColor
-        )}: ${addColor(codeInfo.infoDescription, 33, withColor)}`;
-        const where: string = `${addColor(' -->', 34, withColor)} ${addColor(
-          infos.fileName + ':' + line.toString() + ':' + column.toString(),
-          90,
-          withColor
-        )} :`;
-        const header: string = what + '\n' + where + '\n';
+        const header: string = getHeader(codeInfo, line, column);
 
         const loggedMsg: string = `${spacing}\n${addColor(
-          `${line} | `,
+          `${line + 1} | `,
           36,
           withColor
         )}${mainMsg}\n${
@@ -139,7 +128,7 @@ export namespace logger {
           const helpMsg: string = codeInfo[i].message
             .replace('{arg}', errorCode)
             .split('\n')
-            .join('\n' + spacing);
+            .join('\n' + spacing); // TODO, wrong color for the |
 
           // the invalid code
           msgs[i] = `${
@@ -156,32 +145,88 @@ export namespace logger {
         // TODO merge that into a toHeader() function
         const column: number = getColumnPos(codeInfo[0].index);
         const line: number = getLinePos(codeInfo[0].index);
-        const curLine: string = getLines()[line];
+        let curLine: string = getLines()[line];
+
         // const len: number = getLengthOfMarkedPart(
         //   curLine,
         //   column,
         //   codeInfo[0].length
         // );
+
         const spacing: string = addColor(
           `${' '.repeat(line.toString().length + 1)}| `,
           36,
           withColor
         );
-        const what: string = `${addColor(
-          codeInfo[0].infoType + '[' + codeInfo[0].infoCode + ']',
-          codeInfo[0].infoType === 'error' ? 31 : 90,
-          withColor
-        )}: ${addColor(codeInfo[0].infoDescription, 33, withColor)}`;
-        const where: string = `${addColor(' -->', 34, withColor)} ${addColor(
-          infos.fileName + ':' + line.toString() + ':' + column.toString(),
-          90,
-          withColor
-        )} :`;
-        const header: string = what + '\n' + where + '\n';
+
+        // TODO, its only codeInfo[0]
+        const header: string = getHeader(codeInfo[0], line, column);
+
+        const emptyLines: string[] = msgs.map((v) =>
+          v.slice(0, v.indexOf('^'))
+        );
+
+        const printedMsg: string[] = [];
+        for (let i = 0; i < msgs.length; ++i) {
+          // TODO, dont use global regex, as it could
+          let tmp: number = 0;
+          printedMsg.push(
+            msgs[i]
+              .replace(
+                /(\^+)/,
+                addColor('$1', codeInfo[i].markColor, withColor)
+              )
+              .replace(/\|/g, () => {
+                // get the color of this msg
+                if (tmp !== 0)
+                  return addColor(
+                    '|',
+                    (codeInfo as codeInfoRaw[])[codeInfo.length - tmp++]
+                      .markColor,
+                    withColor
+                  );
+                else {
+                  tmp++;
+                  return '|';
+                }
+              })
+          ); // add color
+          tmp = 0;
+          if (emptyLines.length > i)
+            printedMsg.push(
+              emptyLines[i].replace(/\|/g, () => {
+                // get the color of this msg
+                if (tmp !== 0)
+                  return addColor(
+                    '|',
+                    (codeInfo as codeInfoRaw[])[codeInfo.length - tmp++]
+                      .markColor,
+                    withColor
+                  );
+                else {
+                  tmp++;
+                  return '|';
+                }
+              })
+            ); // add color
+        }
+
+        curLine = curLine; // TODO add color
         //const errorCode: string = curLine.slice(column, column + len);
+
         // TODO insert empty lines inside msgs.join which have the same `|` as the upper line
         console.log(
-          header + spacing + curLine + '' + msgs.join('\n' + spacing + '\n')
+          header +
+            spacing +
+            '\n' +
+            addColor(
+              `${(line + 1).toString() + ' '}| `,
+              36, // custom spacing with line
+              withColor
+            ) +
+            curLine +
+            '' +
+            printedMsg.join('\n')
         );
         //console.log(msgs.join(''));
       }
@@ -208,6 +253,28 @@ export namespace logger {
       return index - (i === -1 ? 0 : i + 1);
       // (lastIndexOf===-1) is ok,
       // as it is (- (-1)) => (index + 1); and this is occuring then (index===0)
+    }
+
+    function getHeader(
+      codeInfo: codeInfoRaw,
+      line: number,
+      column: number
+    ): string {
+      const what: string = `${addColor(
+        codeInfo.infoType + '[' + codeInfo.infoCode + ']',
+        codeInfo.infoType === 'error' ? 31 : 90,
+        withColor
+      )}: ${addColor(codeInfo.infoDescription, 33, withColor)}`;
+      const where: string = `${addColor(' -->', 34, withColor)} ${addColor(
+        infos.fileName +
+          ':' +
+          (line + 1).toString() +
+          ':' +
+          (column + 1).toString(),
+        90,
+        withColor
+      )} :`;
+      return what + '\n' + where + '\n';
     }
 
     function getLengthOfMarkedPart(

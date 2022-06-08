@@ -95,7 +95,7 @@ export namespace lexer {
   // string modifier like "character", "regex", ...
   const stringMod: char[] = ['r', 'c'];
 
-  //
+  // TODO, add none color version
   const errorMsgs: {
     [code: string]: { code: errorCodes; description: string; message: string };
   } = {
@@ -272,7 +272,7 @@ export namespace lexer {
     }
     // #endregion
 
-    log.log('lexer', `finished lexing in ${Date.now() - startTime} ms`);
+    log.log('lexer', `finished lexing in ${Date.now() - startTime} ms\n`);
 
     const errors: log.codeInfoRaw[] = [];
     for (const [value, index] of invalidLexems) {
@@ -285,7 +285,6 @@ export namespace lexer {
         index: index,
         length: value.length,
         markColor: 31,
-        messageColor: 31,
         message: '',
         infoType: 'error',
         infoCode: '',
@@ -330,46 +329,45 @@ export namespace lexer {
       }
     }
 
-    // log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, errors, true);
-    log.logInfo(
-      { fileName: 'myFile2', author: 'lexer' },
-      code,
-      [
+    log.logInfo({ fileName: 'myFile', author: 'lexer' }, code, errors, true);
+
+    if (true)
+      log.logInfo(
+        { fileName: 'myFile2', author: 'lexer' },
+        code,
         [
-          {
-            index: 0,
-            length: 2,
-            markColor: 31,
-            messageColor: 31,
-            message: 'test',
-            infoCode: '5251',
-            infoType: 'error',
-            infoDescription: 'testtest'
-          },
-          {
-            index: 4,
-            length: 5,
-            markColor: 31,
-            messageColor: 31,
-            message: 'test2',
-            infoCode: '5111',
-            infoType: 'error',
-            infoDescription: 'test2test2'
-          },
-          {
-            index: 10,
-            length: 4,
-            markColor: 31,
-            messageColor: 31,
-            message: 'test3',
-            infoCode: '4002',
-            infoType: 'error',
-            infoDescription: 'test3test3'
-          }
-        ]
-      ],
-      true
-    );
+          [
+            {
+              index: 0,
+              length: 2,
+              markColor: 31,
+              message: log.addColor('test', 31),
+              infoCode: '5251',
+              infoType: 'error',
+              infoDescription: 'testtest'
+            },
+            {
+              index: 10,
+              length: 4,
+              markColor: 33,
+              message: log.addColor('test3', 33),
+              infoCode: '4002',
+              infoType: 'error',
+              infoDescription: 'test3test3'
+            },
+            {
+              index: 4,
+              length: 5,
+              markColor: 32,
+              message: log.addColor('test2', 33),
+              infoCode: '5111',
+              infoType: 'error',
+              infoDescription: 'test2test2'
+            }
+          ]
+        ],
+        true
+      );
 
     return lexems;
   }
