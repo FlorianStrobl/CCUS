@@ -2,10 +2,43 @@ import * as c from './compiler';
 import * as l from './lexer';
 
 export namespace parser {
-  export interface ast {}
+  const enum tokenType {
+    identifier = 'identifier',
+    operator = 'operator'
+  }
 
-  export function parse(lexems: l.lexer.lexem[]): ast {
-    console.log(lexems);
+  export interface expression {}
+
+  export interface literalExpression extends expression {}
+  export interface binaryExpression extends expression {}
+  export interface tenaryExpression extends expression {}
+  export interface letExpression extends expression {}
+  export interface funcExpression extends expression {}
+
+  export interface node {
+    token: string;
+    tokenType: tokenType;
+    rawPosition: number;
+    left: node;
+    right: node;
+  }
+
+  export function parse(lexems: l.lexer.lexem[]): any {
+    let ast = {};
+
+    for (let i = 0; i < lexems.length; ++i) {
+      const lexem = lexems[i];
+
+      if (lexem.type === 'keyword' && lexem.content === 'let') {
+      }
+    }
+    /**
+     * Parsing rules:
+     * let (mut)? ID (= EXP)?;
+     * func ID\((ID: TYPE,)\) EXP
+     *
+     */
+
     return {};
   }
 }
