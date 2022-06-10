@@ -34,8 +34,9 @@ export namespace parser {
     }
     /**
      * Parsing rules:
-     * let (mut)? ID (= EXP)?;
-     * func ID\((ID: TYPE,)\) EXP
+     * namespace ID { EXP }
+     * (pub)? let (mut)? ID (= EXP)?;
+     * (pub)? func ID\((ID: TYPE,)\) EXP
      *
      */
 
