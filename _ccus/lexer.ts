@@ -42,8 +42,6 @@ export namespace lexer {
     '.', // seperator
     ',', // enumerator? TODO
     ';', // seperator, whitespace
-    '?', // for tenary
-    ':', // for tenary
     '(', // grouping
     ')', // grouping
     '{', // grouping
@@ -71,10 +69,16 @@ export namespace lexer {
     '|', // binary
     '^', // binary
     '?', // tenary
-    ':', // tenary, type
+    ':', // tenary, type annotation
     '...', // multiple args, or array/enumerator
     '++', // increment operator
-    '--' // decrement operator
+    '--', // decrement operator
+    '+=',
+    '-=',
+    '*=',
+    '/=',
+    '**=',
+    '%='
     /**
      * _ for numbers and identifier/keywords
      * \ for string escape
@@ -88,7 +92,7 @@ export namespace lexer {
     'func',
     'return',
     'if',
-    'for',
+    'loop',
     'match'
   ];
 
@@ -167,6 +171,7 @@ export namespace lexer {
   export function lexe(source: str): lexem[] {
     const startTime: int = Date.now();
 
+    currentIndex = 0;
     code = source;
     const lexems: lexem[] = [];
     let invalidLexems: [value: char, index: int][] = [];
@@ -672,45 +677,3 @@ export namespace lexer {
   // #endregion
   // #endregion
 }
-
-//console.log(
-//   // TODO lex empty string, lex string with space, lex string with single invalid character
-//   // TODO last char == "\n" vs not (and then last char invalid or not)
-//   // 0b10_1010___1_ // invalid
-//   // 3_1_1.1e-1_1 // valid
-//   // 0b1_0_1_0_1 // valid
-//   // 0b_1_ // invalid
-//   // 0b1_ // invalid
-//   //let _varißble = #$ \`sub\` + $ 'string';
-//   //0b_ // invalid
-//   lexer.lexe(`
-// let 0n = 5.0z;
-// let z = "te";
-// 0b0`)
-// );
-
-//console.log(
-lexer.lexe(
-  `let n = 0b1230; let x = 0x421FK34;
-let str = "testa
-"a;
-import std;
-
-func main() {
-  out(f(5));
-}
-
-func f(x: int32): int32 {
-  return 2 * g(x);
-
-  // func g(a: int32): int32 {
-  //   return ++a;
-  // }
-
-  func h(...a: int32[]): int32 {
-    return a[0];
-  }
-}
-`
-);
-//);

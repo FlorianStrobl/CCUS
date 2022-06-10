@@ -1,9 +1,9 @@
-import * as l from './lexer';
+import * as p from './parser';
 
 export namespace compiler {
-  export interface ast {}
+  export interface asm {}
 
-  export function compiler(lexems: l.lexer.lexem[]): ast {
+  export function compiler(ast: p.parser.ast): asm {
     return {};
   }
 }
