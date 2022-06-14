@@ -215,7 +215,7 @@ export namespace lexer {
         if (ans.valid)
           lexems.push({
             content: ans.str,
-            type: tokenType.numericLiteral,
+            type: tokenType.stringLiteral,
             index: startingIndex,
             line: getLinePos(startingIndex),
             column: getColumnPos(startingIndex)
@@ -677,3 +677,5 @@ export namespace lexer {
   // #endregion
   // #endregion
 }
+
+console.log(lexer.lexe(`let x = 5;`));

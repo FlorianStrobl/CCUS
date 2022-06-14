@@ -60,6 +60,7 @@ export namespace parser {
       (getLex(1).type === 'id' || getLex(1).type === 'numericLiteral')
     ) {
       // TODO unary expression!
+      // TODO wrong, what if -3 + 2, it has to actually recall eatExpression() for this!
       let ans = {
         unaryExpression: getLex().content,
         value: getLex(1).content,
