@@ -7,6 +7,10 @@ export namespace parser {
     operator = 'operator'
   }
 
+  const enum attributes {
+    mutable
+  }
+
   export interface expression {}
 
   export interface literalExpression extends expression {}
@@ -14,6 +18,18 @@ export namespace parser {
   export interface tenaryExpression extends expression {}
   export interface letExpression extends expression {}
   export interface funcExpression extends expression {}
+
+  // let ID;
+  // let ID = EXPRESSION;
+  // let [MOD] ID;
+  // let [MOD] ID = EXPRESSION;
+  export interface variableDeclaration extends expression {
+    varIdentifier: string; // e.g. x
+    initializeValue: expression; // e.g. 4
+    modifier: attributes[];
+    startIndex: number; // e.g. 0 (for error msgs)
+    rawString: string; // e.g. let     _a   =  4 ; (for error msgs)
+  }
 
   export interface node {
     token: string;

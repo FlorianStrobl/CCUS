@@ -677,5 +677,3 @@ export namespace lexer {
   // #endregion
   // #endregion
 }
-
-console.log(lexer.lexe(`let x = 5;`));
