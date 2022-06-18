@@ -7,14 +7,14 @@ export namespace parser {
     operator = 'operator'
   }
 
-  const enum varAttributes {
+  enum varAttributes {
     mutable = 'mut',
     public = 'pub',
     private = 'priv',
     constant = 'const'
   }
 
-  const enum funcAttributes {
+  enum funcAttributes {
     public = 'pub',
     private = 'priv',
     constant = 'const'
@@ -107,13 +107,21 @@ type keyword
 
     // ast =
     while (getLex() !== null) {
-      ast.push(parser() as unknown as expression);
+      ast.push(parseSingle() as unknown as expression);
     }
 
     return ast;
   }
 
-  function parser() {
+  // TODO!!
+  function parseMulti(): any[] {
+    return [];
+  }
+
+  function parseSingle() {
+    // TODO, empty statement ig
+    if (getLex().content === '}') return null; // DEBUG ONLY
+
     if (getLex() === null) return null; // TODO finished
 
     while (getLex().type === 'comment') {
@@ -132,7 +140,8 @@ type keyword
       return ast;
     } else if (getLex().type === 'keyword' && getLex().content === 'func') {
       next();
-      return eatFunc();
+      const ast = eatFunc();
+      return ast; // TODO
     } else if (
       getLex().type === 'symbol' &&
       (getLex().content === '-' || getLex().content === '+') &&
@@ -162,7 +171,59 @@ type keyword
     return null; // TODO, what if nothing matches
   }
 
-  function eatFunc() {}
+  function eatFunc() {
+    let lexem: functionDeclaration = {
+      type: 'functionDeclaration',
+      funcId: '',
+      modifier: [],
+      value: [],
+      startIndex: -1,
+      rawString: ''
+    };
+
+    // modifier
+    while (
+      getLex() !== null &&
+      getLex().type === 'keyword' &&
+      Object.values(funcAttributes).includes(getLex().content as any)
+    ) {
+      lexem.modifier.push(getLex().content as any);
+      next();
+    }
+
+    // TODO error if now not identifier
+
+    if (getLex().type === 'id') {
+      lexem.funcId = getLex().content;
+      next();
+    }
+
+    if (getLex().content !== '(') {
+      // ERROR
+    } else next();
+
+    // TODO arguments
+
+    if (getLex().content !== ')') {
+      // ERROR
+    } else next();
+
+    // TODO type
+
+    if (getLex().content !== '{') {
+      // ERROR
+    } else next();
+
+    // TODO get expressions
+    const body = parseSingle();
+    lexem.value = body as any;
+
+    if (getLex().content !== '}') {
+      // ERROR
+    } else next();
+
+    return lexem;
+  }
 
   function eatLet() {
     // TODO
@@ -210,7 +271,7 @@ type keyword
     if (getLex().type === 'symbol' && getLex().content === '=') {
       // its directly initialized
       next();
-      lexem.initializeValue = parser() as any;
+      lexem.initializeValue = parseSingle() as any;
     }
 
     return lexem;
@@ -227,15 +288,21 @@ type keyword
 }
 
 console.log(
-  parser.parse(
+  ...parser.parse(
     l.lexer.lexe(
       `
-      let x;
-      let mut x;
-      let mut x;
+      //let x = 5;
+      //let mut x;
+      //let mut x;
       //let x: i32;
-      let x = 5;
+      //let x = 5;
       //let mut x: i32 = 5;
+
+      func const f() {
+        func g() {
+          let x = 5;
+        }
+      }
       `
     )
   )
