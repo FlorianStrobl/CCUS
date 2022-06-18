@@ -7,11 +7,21 @@ export namespace parser {
     operator = 'operator'
   }
 
-  const enum attributes {
-    mutable
+  const enum varAttributes {
+    mutable = 'mut',
+    public = 'pub',
+    private = 'priv',
+    constant = 'const'
+  }
+
+  const enum funcAttributes {
+    public = 'pub',
+    private = 'priv',
+    constant = 'const'
   }
 
   export interface expression {}
+  export interface statement {}
 
   export interface literalExpression extends expression {}
   export interface binaryExpression extends expression {}
@@ -19,16 +29,35 @@ export namespace parser {
   export interface letExpression extends expression {}
   export interface funcExpression extends expression {}
 
-  // let ID;
-  // let ID = EXPRESSION;
-  // let [MOD] ID;
-  // let [MOD] ID = EXPRESSION;
-  export interface variableDeclaration extends expression {
-    varIdentifier: string; // e.g. x
+  // let ([MOD])? ID (: TYPE)? (= EXPRESSION)?;
+  export interface variableDeclaration extends statement {
+    type: 'variableDeclaration';
+    varId: string; // e.g. x
+    varType: string;
+    modifier: varAttributes[];
     initializeValue: expression; // e.g. 4
-    modifier: attributes[];
     startIndex: number; // e.g. 0 (for error msgs)
     rawString: string; // e.g. let     _a   =  4 ; (for error msgs)
+  }
+
+  // namespace ([MOD])? ID { [EXPRESSION] }
+  export interface namespaceDeclaration extends statement {
+    type: 'namespaceDeclaration';
+    nsId: string;
+    modifier: varAttributes[];
+    value: expression[];
+    startIndex: number;
+    rawString: string;
+  }
+
+  // func [MOD]? ID \((ARG: TYPE),*\) (: TYPE)? { [EXPRESSION] }
+  export interface functionDeclaration extends statement {
+    type: 'functionDeclaration';
+    funcId: string;
+    modifier: funcAttributes[];
+    value: expression[];
+    startIndex: number;
+    rawString: string;
   }
 
   export interface node {
@@ -45,7 +74,7 @@ export namespace parser {
   export function parse(lexems: l.lexer.lexem[]): any {
     _lexems = lexems;
     lexemNr = 0;
-    let ast: any = [];
+    let ast: (expression | statement)[] = [];
 
     /**
      * Parsing rules:
@@ -57,16 +86,29 @@ export namespace parser {
 
     // ast =
     while (getLex() !== null) {
-      ast.push(eatExpression() as unknown as never);
+      ast.push(parser() as unknown as expression);
     }
 
     return ast;
   }
 
-  function eatExpression() {
-    if (getLex().type === 'keyword' && getLex().content === 'let') {
+  function parser() {
+    if (getLex() === null) return null; // TODO finished
+
+    while (getLex().type === 'comment') {
       next();
-      return eatLet();
+      if (getLex() === null) return null;
+    }
+
+    if (getLex().type === 'keyword' && getLex().content === 'let') {
+      next(); // skip the "let" part
+      const ast = eatLet();
+      if (getLex().type === 'symbol' && getLex().content === ';') {
+        next(); // eat the ;
+      } else {
+        throw Error('this is wrong!!');
+      }
+      return ast;
     } else if (getLex().type === 'keyword' && getLex().content === 'func') {
       next();
       return eatFunc();
@@ -95,37 +137,59 @@ export namespace parser {
       next();
       return ans;
     }
+
+    return null; // TODO, what if nothing matches
   }
 
   function eatFunc() {}
 
   function eatLet() {
-    let lexem = {
-      mutable: false,
-      name: '',
-      pos: -1,
-      value: null
+    // TODO
+    let lexem: variableDeclaration = {
+      type: 'variableDeclaration',
+      varId: '', // e.g. x
+      varType: '',
+      modifier: [],
+      initializeValue: [], // e.g. 4
+      startIndex: -1, // e.g. 0 (for error msgs)
+      rawString: '' // e.g. let     _a   =  4 ; (for error msgs)
     };
 
+    lexem.startIndex = getLex(-1).index; // the index of the `let` keyword
+
     // modifier
-    if (getLex().type === 'keyword' && getLex().content === 'mut') {
-      lexem['mutable'] = true;
-      next();
+    while (getLex().type === 'keyword') {
+      if (
+        getLex().content === 'mut' &&
+        !lexem.modifier.includes(varAttributes.mutable)
+      ) {
+        lexem.modifier.push(varAttributes.mutable);
+        next();
+      }
+
+      if (
+        getLex().content === 'pub' &&
+        !lexem.modifier.includes(varAttributes.public)
+      ) {
+        lexem.modifier.push(varAttributes.public);
+        next();
+      }
+
+      break; // TODO got keyword but no value!!
     }
 
-    // name
+    // identifier
     if (getLex().type === 'id') {
-      lexem.name = getLex().content;
-      lexem.pos = getLex().index;
+      lexem.varId = getLex().content;
       next();
     }
 
-    // TODO, typedef
+    // TODO, type :...
 
     if (getLex().type === 'symbol' && getLex().content === '=') {
       // its directly initialized
       next();
-      lexem.value = eatExpression() as any;
+      lexem.initializeValue = parser() as any;
     }
 
     return lexem;
@@ -141,4 +205,17 @@ export namespace parser {
   }
 }
 
-console.log(parser.parse(l.lexer.lexe(`let x = -5 let mut y = "haha"`)));
+console.log(
+  parser.parse(
+    l.lexer.lexe(
+      `
+      let x;
+      let mut x;
+      let mut x;
+      //let x: i32;
+      let x = 5;
+      //let mut x: i32 = 5;
+      `
+    )
+  )
+);

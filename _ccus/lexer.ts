@@ -21,7 +21,7 @@ export namespace lexer {
   export const enum tokenType {
     whitespaces = 'whitespace', // any of: ["\n", " ", "\t"]
     comment = 'comment', // "// singleline comment" or "/*multiline comment*/" (are considered whitespace)
-    symbol = 'symbol', // reserved non-alphanumeric identifiers with length 1 or 2: ["+", "-", "(", "++" ...]
+    symbol = 'symbol', // reserved non-alphanumeric identifiers with length 1, 2 or 3: ["+", "-", "(", "++", ...]
     identifier = 'id', // alphanumeric words like "myFunction", "myVariable", "true", "false"
     keyword = 'keyword', // reserved identifiers: ["func", "bit", ...]
     numericLiteral = 'numericLiteral', // 0, 0.0, 3.e3_5
@@ -86,14 +86,19 @@ export namespace lexer {
   ];
 
   const keywords: str[] = [
-    'bit',
-    'let',
-    'mut',
-    'func',
-    'return',
-    'if',
-    'loop',
-    'match'
+    'bit', // type
+    'namespace', // namespaces
+    'pub', // public for namespaces
+    'priv', // private for namespaces
+    'mut', // mutable data
+    'const', // constant data (?)
+    'let', // variable declaration
+    'func', // function declaration
+    'return', // what a function evaluates to
+    'if', // when true, do that
+    'else', // when if false, do that
+    'loop', // repeat this, while bit | for int | for element
+    'match' // "switch" with expression matching
   ];
 
   // string modifier like "character", "regex", ...
