@@ -120,7 +120,7 @@ type keyword
 
   function parseSingle() {
     // TODO, empty statement ig
-    if (getLex().content === '}') return null; // DEBUG ONLY
+    //if (getLex().content === '}') return null; // DEBUG ONLY
 
     if (getLex() === null) return null; // TODO finished
 
@@ -215,7 +215,10 @@ type keyword
     } else next();
 
     // TODO get expressions
-    const body = parseSingle();
+    const body: any = [];
+    while (getLex().content !== '}') {
+      body.push(parseSingle() as any);
+    }
     lexem.value = body as any;
 
     if (getLex().content !== '}') {

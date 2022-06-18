@@ -39,6 +39,9 @@ export namespace lexer {
   }
 
   const symbols: str[] = [
+    '@',
+    "'",
+    '#', // TODO, to remove
     '.', // seperator
     ',', // enumerator? TODO
     ';', // seperator, whitespace
