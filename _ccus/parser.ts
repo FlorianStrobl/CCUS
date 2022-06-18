@@ -29,6 +29,23 @@ export namespace parser {
   export interface letExpression extends expression {}
   export interface funcExpression extends expression {}
 
+  /**
+ *
+;
+literal;
+validInContextIdentifier;
+
+"Operator must be followed by required stuff!!"
+
+if (EXPRESSION) EXPRESSION else EXPRESSION
+loop (EXPRESSION) EXPRESSION
+
+struct/object/array "literal"
+
+macros??
+type keyword
+ */
+
   // let ([MOD])? ID (: TYPE)? (= EXPRESSION)?;
   export interface variableDeclaration extends statement {
     type: 'variableDeclaration';
@@ -58,6 +75,10 @@ export namespace parser {
     value: expression[];
     startIndex: number;
     rawString: string;
+  }
+
+  export interface typeDeclaration extends statement {
+    type: 'typeDeclaration';
   }
 
   export interface node {
