@@ -117,7 +117,7 @@ fn union() {
 }
 
 fn special_characters() {
-    let val = !((|(..):(_,_),(|__@_|__)|__)((&*"\\\\",'🤔')/**/,{})=={&[..=..][..];})//
+    let val = !((|(..):(_,_),(|__@_|__)|__)((&*"\\",'🤔')/**/,{})=={&[..=..][..];})//
     ;
     assert!(!val);
 }
@@ -229,6 +229,5 @@ const lexems = lexer.lexe(
     .replace(/𝚕𝚘𝚘𝚙/g, 'loop')
     .replace(/𝚛𝚎𝚝𝚞𝚛𝚗/g, 'return')
     .replace(/𝚋𝚛𝚎𝚊𝚔/g, 'break')
-    .replace(/\\/g, '') // TODO fix "\\" in the lexer!
 );
 console.log(lexems);

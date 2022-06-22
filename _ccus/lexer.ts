@@ -545,11 +545,28 @@ export namespace lexer {
   function eatString(): { charCount: int; str: str; valid: bool } {
     let str: str = '"';
     let isValid: bool = true;
+    let shift: number = 0;
 
     while (true) {
       // handle "\n", "\t", \uxxxx and escaped \  "\\"
       // handle next escaped character!
       if (curChar() === '\\') {
+        // escaped character
+        advance(); // go to next character
+        if (curChar() === '\\') {
+          str += '\\';
+          shift++;
+          advance();
+        } else if (curChar() === '"') {
+          str += '"';
+          advance();
+          shift++;
+        } else if (curChar() === 't') {
+          str += '\t';
+          shift++;
+          advance();
+        }
+        // TODO
       } else if (curChar() === '"') {
         // end of string
 
@@ -581,7 +598,7 @@ export namespace lexer {
     }
 
     return {
-      charCount: str.length - 1, // check first the size
+      charCount: str.length - 1 + shift, // check first the size
       str: str, // then modify it TODO
       // .replace(/\\\\|\\t|\\n/g, (match) => {
       //   // function because of \\\\n, which could get parsed first into \n and then leaving the \\\ to be processed
@@ -690,10 +707,3 @@ export namespace lexer {
   // #endregion
   // #endregion
 }
-
-// TODO
-console.log(
-  lexer.lexe(`"test
-
-r`)
-);
