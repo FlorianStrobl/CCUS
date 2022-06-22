@@ -217,9 +217,8 @@ export namespace lexer {
       } else if (!!curChar().match(/^"$/)) {
         // started string
         const startingIndex: int = currentIndex;
-
+        advance();
         const ans = eatString();
-
         i += ans.charCount;
 
         if (ans.valid)
@@ -544,29 +543,33 @@ export namespace lexer {
   }
 
   function eatString(): { charCount: int; str: str; valid: bool } {
-    let str: str = '';
+    let str: str = '"';
     let isValid: bool = true;
 
     while (true) {
       // handle "\n", "\t", \uxxxx and escaped \  "\\"
-      if (curChar() !== '\\' && nextChars() === '"') {
-        // stop string next char
+      // handle next escaped character!
+      if (curChar() === '\\') {
+      } else if (curChar() === '"') {
+        // end of string
+
+        // stop string, now the last char check
         str += curChar();
-        if (advance()) break; // TODO, needed? break because of end of file
+        //advance();
 
         // add the r in ""r
         // TODO what if it is ""abc, and what if it is end of file?
         // check if the next char is a single and valid string type character
+
         if (
           // check if it is not an identifier/keyword
           nextChars() !== undefined &&
-          isAlphaNumeric(nextChars())
+          !!nextChars().match(/^[a-zA-Z]$/)
         ) {
-          isValid = stringMod.includes(nextChars());
-          str += '"' + nextChars();
-          if (advance()) break; // TODO, needed? break because of end of file
-        } else str += '"';
-
+          isValid = stringMod.includes(nextChars().toLowerCase());
+          str += nextChars();
+          advance(); // to skip the " symbol, not the nextChars()
+        }
         break;
       } else {
         str += curChar();
@@ -579,23 +582,23 @@ export namespace lexer {
 
     return {
       charCount: str.length - 1, // check first the size
-      str: str // then modify it
-        .replace(/\\\\|\\t|\\n/g, (match) => {
-          // function because of \\\\n, which could get parsed first into \n and then leaving the \\\ to be processed
-          switch (match) {
-            case '\\\\':
-              return '\\';
-            case '\\t':
-              return '\t';
-            case '\\n':
-              return '\n';
-            default:
-              return match;
-          }
-        })
-        .replace(/\\u(\d{4})/, (_, digits) =>
-          String.fromCharCode(Number('0x' + (digits as string)))
-        ),
+      str: str, // then modify it TODO
+      // .replace(/\\\\|\\t|\\n/g, (match) => {
+      //   // function because of \\\\n, which could get parsed first into \n and then leaving the \\\ to be processed
+      //   switch (match) {
+      //     case '\\\\':
+      //       return '\\';
+      //     case '\\t':
+      //       return '\t';
+      //     case '\\n':
+      //       return '\n';
+      //     default:
+      //       return match;
+      //   }
+      // })
+      // .replace(/\\u(\d{4})/, (_, digits) =>
+      //   String.fromCharCode(Number('0x' + (digits as string)))
+      // )
       valid: isValid
     };
   }
@@ -689,4 +692,8 @@ export namespace lexer {
 }
 
 // TODO
-// console.log(lexer.lexe('"\\\\"'));
+console.log(
+  lexer.lexe(`"test
+
+r`)
+);

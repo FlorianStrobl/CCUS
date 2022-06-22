@@ -218,6 +218,7 @@ pub fn main() {
     bathroom_stall();
 }
 `;
+
 import { lexer } from './lexer';
 const lexems = lexer.lexe(
   code
@@ -230,4 +231,4 @@ const lexems = lexer.lexe(
     .replace(/𝚋𝚛𝚎𝚊𝚔/g, 'break')
     .replace(/\\/g, '') // TODO fix "\\" in the lexer!
 );
-console.log(lexems[lexems.length - 13]);
+console.log(lexems);

@@ -145,6 +145,11 @@ type keyword
     ) {
       // TODO unary expression!
       // TODO wrong, what if -3 + 2, it has to actually recall eatExpression() for this!
+      /**
+       * HERE
+       * do a while-loop with
+       * currentLexem and nextLexem() === operator (binary op)
+       */
       let ans = eatUnary(getLex());
       return ans; // TODO not return!!
     } else if (
