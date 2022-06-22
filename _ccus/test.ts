@@ -1,7 +1,4 @@
-import { lexer } from './lexer';
-console.log(
-  lexer.lexe(
-    `// run-pass
+const code = `// run-pass
 
 #![feature(generators)]
 #![feature(unboxed_closures, fn_traits)]
@@ -120,7 +117,7 @@ fn union() {
 }
 
 fn special_characters() {
-    let val = !((|(..):(_,_),(|__@_|__)|__)((&*"\\",'🤔')/**/,{})=={&[..=..][..];})//
+    let val = !((|(..):(_,_),(|__@_|__)|__)((&*"\\\\",'🤔')/**/,{})=={&[..=..][..];})//
     ;
     assert!(!val);
 }
@@ -220,10 +217,17 @@ pub fn main() {
     function();
     bathroom_stall();
 }
-
-`
-      .replace(/8u8/g, 'u8')
-      .replace(/0u8/g, 'u8')
-      .replace(/🤔/g, '')
-  )
+`;
+import { lexer } from './lexer';
+const lexems = lexer.lexe(
+  code
+    .replace(/8u8/g, 'u8')
+    .replace(/0u8/g, 'u8')
+    .replace(/🤔/g, '')
+    .replace(/𝚌𝚘𝚗𝚝𝚒𝚗𝚞𝚎/g, 'continue')
+    .replace(/𝚕𝚘𝚘𝚙/g, 'loop')
+    .replace(/𝚛𝚎𝚝𝚞𝚛𝚗/g, 'return')
+    .replace(/𝚋𝚛𝚎𝚊𝚔/g, 'break')
+    .replace(/\\/g, '') // TODO fix "\\" in the lexer!
 );
+console.log(lexems[lexems.length - 13]);

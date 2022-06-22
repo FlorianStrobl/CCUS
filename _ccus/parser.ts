@@ -296,9 +296,8 @@ type keyword
 }
 
 console.log(
-  ...parser.parse(
-    l.lexer.lexe(
-      `
+  l.lexer.lexe(
+    `
       //let x = 5;
       //let mut x;
       //let mut x;
@@ -306,12 +305,15 @@ console.log(
       //let x = 5;
       //let mut x: i32 = 5;
 
-      func const f() {
+      /*func const f() {
         func g() {
           let x = 5;
         }
-      }
+      }*/
+
+      let x = ++y * 4 + 3 * 2;
+      let u = (f = -3 - 2 * (3 + 7));
       `
-    )
-  )
+  ),
+  ...parser.parse([])
 );

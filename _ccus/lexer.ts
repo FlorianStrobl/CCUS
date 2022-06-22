@@ -5,6 +5,8 @@ type str = string;
 type char = string;
 type bool = boolean;
 
+// TODO test:
+// https://github.com/rust-lang/rust/blob/master/src/test/ui/weird-exprs.rs
 export namespace lexer {
   // #region internal
   // a "word"/token in the source code
@@ -324,7 +326,7 @@ export namespace lexer {
         errors.push(error);
       } else if (value.startsWith('"')) {
         let _error;
-        if (!!value.match(/^(.|\n|\\")*"[a-zA-Z]?$/))
+        if (!!value.match(/^"(.|\n|\\")*"[a-zA-Z]?$/))
           _error = errorMsgs[errorCodes.invalidStringLiteral];
         //error.index = index + 10; // + the chars required to get to the end of the line
         else _error = errorMsgs[errorCodes.unexpectedEndOfFile];
@@ -685,3 +687,6 @@ export namespace lexer {
   // #endregion
   // #endregion
 }
+
+// TODO
+// console.log(lexer.lexe('"\\\\"'));
