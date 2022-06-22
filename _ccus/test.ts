@@ -230,4 +230,5 @@ const lexems = lexer.lexe(
     .replace(/𝚛𝚎𝚝𝚞𝚛𝚗/g, 'return')
     .replace(/𝚋𝚛𝚎𝚊𝚔/g, 'break')
 );
+
 console.log(lexems);
