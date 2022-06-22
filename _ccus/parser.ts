@@ -2,6 +2,7 @@ import * as c from './compiler';
 import * as l from './lexer';
 
 export namespace parser {
+  // #region types
   const enum tokenType {
     identifier = 'identifier',
     operator = 'operator'
@@ -46,6 +47,7 @@ macros??
 type keyword
  */
 
+  // #region interfaces
   // let ([MOD])? ID (: TYPE)? (= EXPRESSION)?;
   export interface variableDeclaration extends statement {
     type: 'variableDeclaration';
@@ -80,34 +82,30 @@ type keyword
   export interface typeDeclaration extends statement {
     type: 'typeDeclaration';
   }
-
-  export interface node {
-    token: string;
-    tokenType: tokenType;
-    rawPosition: number;
-    left: node;
-    right: node;
-  }
+  // #endregion
 
   let _lexems: l.lexer.lexem[];
-  let lexemNr: number;
+  let lexemIndex: number;
+  // #endregion
 
-  export function parse(lexems: l.lexer.lexem[]): any {
-    _lexems = lexems;
-    lexemNr = 0;
+  export function parse(lexems: l.lexer.lexem[]): any[] {
+    _lexems = lexems.filter(
+      (lexem) => lexem.type !== 'comment' && lexem.type !== 'whitespace'
+    );
+    lexemIndex = 0;
     let ast: (expression | statement)[] = [];
 
     /**
      * Parsing rules:
-     * namespace ID { EXP }
+     * namespace ID { [EXP] }
      * (pub)? let (mut)? ID (= EXP)?;
      * (pub)? func ID\((ID: TYPE,)\) EXP
      *
      */
 
-    // ast =
+    // while lexems exist
     while (getLex() !== null) {
-      ast.push(parseSingle() as unknown as expression);
+      ast.push(parseSingle() as any);
     }
 
     return ast;
@@ -118,46 +116,37 @@ type keyword
     return [];
   }
 
-  function parseSingle() {
+  function parseSingle(): null | any {
     // TODO, empty statement ig
     //if (getLex().content === '}') return null; // DEBUG ONLY
 
     if (getLex() === null) return null; // TODO finished
 
-    while (getLex().type === 'comment') {
-      next();
-      if (getLex() === null) return null;
-    }
-
-    if (getLex().type === 'keyword' && getLex().content === 'let') {
-      next(); // skip the "let" part
-      const ast = eatLet();
-      if (getLex().type === 'symbol' && getLex().content === ';') {
-        next(); // eat the ;
-      } else {
-        throw Error('this is wrong!!');
-      }
-      return ast;
-    } else if (getLex().type === 'keyword' && getLex().content === 'func') {
+    // #region get a statement
+    if (getLex().type === 'keyword' && getLex().content === 'func') {
       next();
       const ast = eatFunc();
       return ast; // TODO
+    }
+    // #endregion
+
+    // #region get an expression
+    if (getLex().type === 'keyword' && getLex().content === 'let') {
+      next(); // skip the "let" lexem
+      const ast = eatLet();
+      if (getLex().type === 'symbol' && getLex().content === ';')
+        next(); // eat the `;`
+      else throw Error('wrong usage of the `let` keyword! a `;` is missing');
+
+      return ast;
     } else if (
       getLex().type === 'symbol' &&
-      (getLex().content === '-' || getLex().content === '+') &&
-      (getLex(1).type === 'id' || getLex(1).type === 'numericLiteral')
+      (getLex().content === '-' || getLex().content === '+')
     ) {
       // TODO unary expression!
       // TODO wrong, what if -3 + 2, it has to actually recall eatExpression() for this!
-      let ans = {
-        unaryExpression: getLex().content,
-        value: getLex(1).content,
-        valueType: getLex(1).type,
-        valuePos: getLex(1).index
-      };
-      next();
-      next();
-      return ans;
+      let ans = eatUnary(getLex());
+      return ans; // TODO not return!!
     } else if (
       getLex().type === 'id' ||
       getLex().type === 'numericLiteral' ||
@@ -167,10 +156,12 @@ type keyword
       next();
       return ans;
     }
+    // #endregion
 
     return null; // TODO, what if nothing matches
   }
 
+  // #region eat
   function eatFunc() {
     let lexem: functionDeclaration = {
       type: 'functionDeclaration',
@@ -228,6 +219,15 @@ type keyword
     return lexem;
   }
 
+  function eatUnary(lexem: l.lexer.lexem) {
+    return {
+      unaryExpression: getLex().content,
+      value: getLex(1).content,
+      valueType: getLex(1).type,
+      valuePos: getLex(1).index
+    };
+  }
+
   function eatLet() {
     // TODO
     let lexem: variableDeclaration = {
@@ -279,15 +279,20 @@ type keyword
 
     return lexem;
   }
+  // #endregion
 
-  function next(): void {
-    lexemNr++;
+  // #region helper functions
+  function next(): null | l.lexer.lexem {
+    lexemIndex++;
+    if (lexemIndex === _lexems.length) return null;
+    else return getLex();
   }
 
   function getLex(future: number = 0): l.lexer.lexem {
-    if (future + lexemNr >= _lexems.length) return null as any;
-    return _lexems[lexemNr + future];
+    if (future + lexemIndex >= _lexems.length) return null as any;
+    return _lexems[lexemIndex + future];
   }
+  // #endregion
 }
 
 console.log(
