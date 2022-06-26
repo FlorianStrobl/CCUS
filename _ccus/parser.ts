@@ -120,50 +120,66 @@ type keyword
     // TODO, empty statement ig
     //if (getLex().content === '}') return null; // DEBUG ONLY
 
-    if (getLex() === null) return null; // TODO finished
+    while (getLex() !== null) {
+      // #region get a statement
+      if (getLex().type === 'keyword' && getLex().content === 'func') {
+        next();
+        const ast = eatFunc();
+        return ast; // TODO
+      }
+      // #endregion
 
-    // #region get a statement
-    if (getLex().type === 'keyword' && getLex().content === 'func') {
-      next();
-      const ast = eatFunc();
-      return ast; // TODO
+      // #region get an expression
+      if (getLex().type === 'keyword' && getLex().content === 'let') {
+        next(); // skip the "let" lexem
+        const ast = eatLet();
+        if (getLex().type === 'symbol' && getLex().content === ';')
+          next(); // eat the `;`
+        else throw Error('wrong usage of the `let` keyword! a `;` is missing');
+
+        return ast;
+      } else if (getLex().type === 'symbol' && getLex().content === '(') {
+        next();
+        let ast = parseSingle();
+        if (getLex().content !== ')') {
+          // TODO error
+        } else next();
+        return { type: 'group', value: ast };
+      } else if (
+        getLex().type === 'symbol' &&
+        (getLex().content === '-' || getLex().content === '+')
+      ) {
+        // TODO unary expression!
+        // TODO wrong, what if -3 + 2, it has to actually recall eatExpression() for this!
+        /**
+         * HERE
+         * do a while-loop with
+         * currentLexem and nextLexem() === operator (binary op)
+         */
+        const lex = getLex();
+        next();
+        return eatUnary(lex); // TODO not return!!
+      } else if (
+        getLex().type === 'id' ||
+        getLex().type === 'numericLiteral' ||
+        getLex().type === 'stringLiteral'
+      ) {
+        // while valid, get next lexem and continue parsing
+        let leftVal = getLex(); // get current value
+        while (true) {
+          next();
+          let nextLex = getLex(); // get operator or next value
+        }
+        let ans = { valueExpression: getLex().content, type: getLex().type };
+        next();
+        return ans;
+      }
+      // #endregion
+
+      return null; // TODO, what if nothing matches}
     }
-    // #endregion
 
-    // #region get an expression
-    if (getLex().type === 'keyword' && getLex().content === 'let') {
-      next(); // skip the "let" lexem
-      const ast = eatLet();
-      if (getLex().type === 'symbol' && getLex().content === ';')
-        next(); // eat the `;`
-      else throw Error('wrong usage of the `let` keyword! a `;` is missing');
-
-      return ast;
-    } else if (
-      getLex().type === 'symbol' &&
-      (getLex().content === '-' || getLex().content === '+')
-    ) {
-      // TODO unary expression!
-      // TODO wrong, what if -3 + 2, it has to actually recall eatExpression() for this!
-      /**
-       * HERE
-       * do a while-loop with
-       * currentLexem and nextLexem() === operator (binary op)
-       */
-      let ans = eatUnary(getLex());
-      return ans; // TODO not return!!
-    } else if (
-      getLex().type === 'id' ||
-      getLex().type === 'numericLiteral' ||
-      getLex().type === 'stringLiteral'
-    ) {
-      let ans = { valueExpression: getLex().content, type: getLex().type };
-      next();
-      return ans;
-    }
-    // #endregion
-
-    return null; // TODO, what if nothing matches
+    return null; // TODO finished
   }
 
   // #region eat
@@ -224,13 +240,9 @@ type keyword
     return lexem;
   }
 
+  // e.g. -(3 + 2)
   function eatUnary(lexem: l.lexer.lexem) {
-    return {
-      unaryExpression: getLex().content,
-      value: getLex(1).content,
-      valueType: getLex(1).type,
-      valuePos: getLex(1).index
-    };
+    return { unaryExpression: lexem.content, value: parseSingle() };
   }
 
   function eatLet() {
