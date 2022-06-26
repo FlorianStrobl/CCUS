@@ -176,7 +176,7 @@ type keyword
       }
       // #endregion
 
-      return null; // TODO, what if nothing matches}
+      return null; // TODO, what if nothing matches
     }
 
     return null; // TODO finished
@@ -242,7 +242,11 @@ type keyword
 
   // e.g. -(3 + 2)
   function eatUnary(lexem: l.lexer.lexem) {
-    return { unaryExpression: lexem.content, value: parseSingle() };
+    return {
+      type: 'unaryExpression',
+      unaryExpression: lexem.content,
+      value: parseSingle()
+    };
   }
 
   function eatLet() {
