@@ -1,4 +1,5 @@
 import { logger as log } from './logging';
+import * as data from './data';
 
 type int = number;
 type str = string;
@@ -40,71 +41,9 @@ export namespace lexer {
     unexpectedEndOfFile = '0006'
   }
 
-  const symbols: str[] = [
-    '@',
-    "'",
-    '#', // TODO, to remove
-    '.', // seperator
-    ',', // enumerator? TODO
-    ';', // seperator, whitespace
-    '(', // grouping
-    ')', // grouping
-    '{', // grouping
-    '}', // grouping
-    '[', // grouping
-    ']', // grouping
-    '=', // assigment
-    '+', // math
-    '-', // math
-    '*', // math
-    '/', // math
-    '**', // math
-    '%', // math
-    '<', // bool, math
-    '>', // bool, math
-    '<=', // bool, math
-    '>=', // bool, math
-    '==', // bool
-    '!=', // bool
-    '!', // bool
-    '&&', // bool
-    '||', // bool
-    '~', // binary
-    '&', // binary
-    '|', // binary
-    '^', // binary
-    '?', // tenary
-    ':', // tenary, type annotation
-    '...', // multiple args, or array/enumerator
-    '++', // increment operator
-    '--', // decrement operator
-    '+=',
-    '-=',
-    '*=',
-    '/=',
-    '**=',
-    '%='
-    /**
-     * _ for numbers and identifier/keywords
-     * \ for string escape
-     */
-  ];
+  const symbols: str[] = data.symbols.map((v) => v.symbol);
 
-  const keywords: str[] = [
-    'bit', // type
-    'namespace', // namespaces
-    'pub', // public for namespaces
-    'priv', // private for namespaces
-    'mut', // mutable data
-    'const', // constant data (?)
-    'let', // variable declaration
-    'func', // function declaration
-    'return', // what a function evaluates to
-    'if', // when true, do that
-    'else', // when if false, do that
-    'loop', // repeat this, while bit | for int | for element
-    'match' // "switch" with expression matching
-  ];
+  const keywords: str[] = data.keywords;
 
   // string modifier like "character", "regex", ...
   const stringMod: char[] = ['r', 'c'];
